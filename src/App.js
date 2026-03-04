@@ -9,18 +9,17 @@ import { useState, useEffect, useRef, useCallback } from "react";
    ============================================================ */
 const CFG = {
   // --- CLOUDINARY ---
-  CLOUD_NAME:    "dcmdyyicv",       // Settings → Account → Cloud name
+  CLOUD_NAME:    "your_cloud_name",       // Settings → Account → Cloud name
   UPLOAD_PRESET: "dearmatrip_unsigned",   // Settings → Upload → Add unsigned preset
 
   // --- SUPABASE ---
-  SUPABASE_URL:  "https://xvueednasqcttfcwonun.supabase.co",
-  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dWVlZG5hc3FjdHRmY3dvbnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDM3MzQsImV4cCI6MjA4ODE3OTczNH0.WbUZtx4cTaAS0cKmSZhy4e-ilOb7V4GEagFp1XWU4Ao",
+  SUPABASE_URL:  "https://xxxx.supabase.co",
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
 
   // --- UMUM ---
   ADMIN_PASS: "dearmatrip2025",
-  WA_NUM:     "62818520057",
+  WA_NUM:     "6281234567890",
 };
-
 
 /* ============================================================
    SUPABASE MINI-CLIENT  (tanpa install package)
@@ -2524,13 +2523,13 @@ function Footer({ go }) {
    ============================================================ */
 export default function App() {
   // ── Page persist on refresh; admin persists if session active
+  // Page persist on refresh; clears when tab closes
   const [page, setPage] = useState(()=>{
     const p = sessionStorage.getItem("dm_page")||"home";
     if(p==="admin" && sessionStorage.getItem("dm_admin")==="1") return "admin";
     if(p==="admin") return "home";
     return p;
-  }); (persist on refresh, clear on close)
-  const [page,   setPage]   = useState(()=>sessionStorage.getItem("dm_page")||"home");
+  });
   const [params, setParams] = useState(()=>{
     try{ return JSON.parse(sessionStorage.getItem("dm_params")||"{}"); }catch{ return {}; }
   });
