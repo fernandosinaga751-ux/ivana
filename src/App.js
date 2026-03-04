@@ -18,7 +18,7 @@ const CFG = {
 
   // --- UMUM ---
   ADMIN_PASS: "dearmatrip2025",
-  WA_NUM:     "62818520057",
+  WA_NUM:     "6281262520057",
 };
 
 
