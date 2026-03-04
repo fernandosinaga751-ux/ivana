@@ -10,10 +10,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 const CFG = {
   CLOUD_NAME:    "dcmdyyicv",
   UPLOAD_PRESET: "dearmatrip_unsigned",
-  SUPABASE_URL:  "https://xvueednasqcttfcwonun.supabase.co",   // ← GANTI INI
-  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dWVlZG5hc3FjdHRmY3dvbnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDM3MzQsImV4cCI6MjA4ODE3OTczNH0.WbUZtx4cTaAS0cKmSZhy4e-ilOb7V4GEagFp1XWU4Ao",                // ← GANTI INI
+  SUPABASE_URL:  "https://xvueednasqcttfcwonun.supabase.co",   // ← dari Supabase Settings > API
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dWVlZG5hc3FjdHRmY3dvbnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDM3MzQsImV4cCI6MjA4ODE3OTczNH0.WbUZtx4cTaAS0cKmSZhy4e-ilOb7V4GEagFp1XWU4Ao",                  // ← anon key
   ADMIN_PASS: "dearmatrip2025",
-  WA_NUM:     "62818520057",
+  WA_NUM:     "62818520057",                   // ← nomor WA tanpa + dan spasi
 };
 
 
