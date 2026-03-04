@@ -1,0 +1,2798 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dearmatrip - Tour Operator Sumatera</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body style="margin:0;padding:0;background:#07111E">
+  <div id="root"></div>
+  <script type="text/babel">
+
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ============================================================
+   ⚙️  KONFIGURASI — ISI SESUAI AKUN ANDA
+   ============================================================
+   CLOUDINARY  → cloudinary.com (daftar gratis)
+   SUPABASE    → supabase.com  (daftar gratis)
+   ============================================================ */
+const CFG = {
+  // --- CLOUDINARY ---
+  CLOUD_NAME:    "dcmdyyicv",       // Settings → Account → Cloud name
+  UPLOAD_PRESET: "dearmatrip_unsigned",   // Settings → Upload → Add unsigned preset
+
+  // --- SUPABASE ---
+  SUPABASE_URL:  "https://zstrcuzhehaeyeqnopjg.supabase.co",
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzdHJjdXpoZWhhZXllcW5vcGpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2Mzc5NTUsImV4cCI6MjA4ODIxMzk1NX0.0WsSss2DtDtrxF5q38j3K-hPo9Da3O1f1WFxOe2Lh_A",
+
+  // --- UMUM ---
+  ADMIN_PASS: "dearmatrip2025",
+  WA_NUM:     "62818520057",
+};
+
+/* ============================================================
+   SUPABASE MINI-CLIENT  (tanpa install package)
+   ============================================================ */
+const sb = {
+  headers: () => ({
+    "Content-Type": "application/json",
+    apikey: CFG.SUPABASE_ANON,
+    Authorization: `Bearer ${CFG.SUPABASE_ANON}`,
+  }),
+  url: (table, query = "") =>
+    `${CFG.SUPABASE_URL}/rest/v1/${table}${query}`,
+
+  async select(table, query = "") {
+    const r = await fetch(sb.url(table, query), {
+      headers: { ...sb.headers(), Accept: "application/json",
+        Prefer: "return=representation" },
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async upsert(table, data) {
+    const r = await fetch(sb.url(table), {
+      method: "POST",
+      headers: { ...sb.headers(), Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async update(table, id, data) {
+    const r = await fetch(sb.url(table, `?id=eq.${id}`), {
+      method: "PATCH",
+      headers: { ...sb.headers(), Prefer: "return=representation" },
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async remove(table, id) {
+    const r = await fetch(sb.url(table, `?id=eq.${id}`), {
+      method: "DELETE", headers: sb.headers(),
+    });
+    if (!r.ok) throw new Error(await r.text());
+  },
+};
+
+/* ============================================================
+   CLOUDINARY UPLOAD  (unsigned preset)
+   ============================================================ */
+async function uploadToCloudinary(file, onProgress) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("upload_preset", CFG.UPLOAD_PRESET);
+  fd.append("folder", "dearmatrip");
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress)
+        onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) resolve(JSON.parse(xhr.responseText).secure_url);
+      else reject(new Error("Upload gagal"));
+    };
+    xhr.onerror = () => reject(new Error("Network error"));
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CFG.CLOUD_NAME}/image/upload`);
+    xhr.send(fd);
+  });
+}
+
+/* ============================================================
+   DEFAULT / FALLBACK DATA  (dipakai jika Supabase kosong)
+   ============================================================ */
+const DEFAULT_TRIPS = [
+  {
+    id: "t1", destination: "danautoba", type: "open",
+    name: "Open Trip Danau Toba One Day Trip", duration: "1 Hari",
+    pax_pricing: [{ pax: 1, label: "1 Pax", price: 350000 }],
+    hero_image: "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=1400&q=90",
+    gallery: ["https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=800","https://images.unsplash.com/photo-1596458834709-1e17e9efd95a?w=800"],
+    description: "Nikmati keindahan Danau Toba dalam satu hari penuh bersama Dearmatrip. Paket wisata one day trip ini cocok untuk Anda yang ingin melihat keajaiban danau vulkanik terbesar di dunia dengan waktu yang efisien dari Kota Medan.",
+    itinerary: [{ day:1, title:"Day 1", rows:[["07.00","Pick Up Peserta di Medan"],["07.15 – 11.00","Perjalanan menuju Danau Toba"],["11.00 – 12.00","Pantai Pasir Putih Parbaba"],["12.00 – 13.00","Makan Siang"],["13.00 – 16.30","Tuk Tuk Samosir & Bukit Holbung"],["16.30 – 23.00","Menuju Medan"]] }],
+    termasuk: ["Transportasi Medan – Danau Toba PP","Supir + BBM + Parkir + Tol","Air Mineral","Guide","Tiket Wisata","Dokumentasi Foto & Video","First Aid Kit"],
+    tidak_termasuk: ["Tiket Pesawat","Keperluan Pribadi","Snack"],
+    catatan: ["Peserta wajib hadir 15 menit sebelum keberangkatan","Membawa pakaian ganti","Membawa sunscreen dan topi"],
+    jadwal: { Jan:["04, 05","11, 12","18, 19"],Feb:["01, 02","08, 09"],Mar:["01, 02","08, 09","15, 16"] },
+    faq: [{q:"Apakah ada biaya tambahan?",a:"Tidak ada biaya tambahan selama trip berlangsung."},{q:"Dimana meeting point?",a:"Jl. Pengabdian No. 103, Bandar Setia, Deli Serdang."}],
+    lokasi: "Danau Toba, Sumatera Utara",
+    lokasi_embed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d507913.33!2d98.56!3d2.65!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1",
+    ulasan: [{nama:"Andi Pratama",rating:5,komentar:"Trip yang sangat seru! Guide sangat ramah. Pasti repeat!",tanggal:"Des 2024"},{nama:"Sari Dewi",rating:5,komentar:"Dokumentasi fotonya bagus banget! Pelayanan memuaskan.",tanggal:"Des 2024"}],
+    sort_order: 1,
+  },
+  {
+    id: "t2", destination: "danautoba", type: "private",
+    name: "Private Trip Danau Toba", duration: "1 Hari",
+    pax_pricing: [{ pax:2, label:"2 Pax", price:1200000 },{ pax:4, label:"4 Pax", price:900000 },{ pax:6, label:"6 Pax", price:750000 },{ pax:10, label:"10+ Pax", price:600000 }],
+    hero_image: "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=1400&q=90",
+    gallery: [],
+    description: "Nikmati Danau Toba secara eksklusif bersama group Anda. Jadwal fleksibel sesuai keinginan. Cocok untuk keluarga, couple, atau group teman.",
+    itinerary: [{ day:1, title:"Day 1", rows:[["07.00","Pick Up di lokasi disepakati"],["07.15 – 11.00","Perjalanan ke Danau Toba"],["11.00 – 16.30","Aktivitas (sesuai request group)"],["16.30 – 23.00","Kembali ke Medan"]] }],
+    termasuk: ["Transportasi PP","Guide","Air Mineral","Tiket Wisata"],
+    tidak_termasuk: ["Makan","Keperluan Pribadi"],
+    catatan: ["Jadwal fleksibel","Minimal pemesanan H-3","Harga negosiasi untuk group besar"],
+    jadwal: {},
+    faq: [{q:"Berapa minimal pax?",a:"Minimal 2 orang untuk Private Trip."}],
+    lokasi: "Danau Toba, Sumatera Utara",
+    lokasi_embed: "",
+    ulasan: [],
+    sort_order: 2,
+  },
+];
+
+const DEFAULT_FAQ = [
+  { id:"f1", question:"Apakah ada biaya tambahan selama Open Trip?", answer:"Peserta tidak dipungut biaya tambahan selama trip berlangsung.", sort_order:1 },
+  { id:"f2", question:"Kemana tujuan airport?", answer:"Untuk wisata di Sumatera Utara, airport tujuan adalah Kualanamu (KNO). Untuk Banda Aceh, Sultan Iskandar Muda (BTJ).", sort_order:2 },
+  { id:"f3", question:"Dimanakah meeting point?", answer:"Jl. Pengabdian No. 103 Bandar Setia, Kec. Percut Sei Tuan, Kab Deli Serdang, Sumatera Utara 20371.", sort_order:3 },
+  { id:"f4", question:"Bagaimana cara booking?", answer:"1. Hubungi Admin via WhatsApp\n2. Pilih trip dan tanggal\n3. Isi form data peserta\n4. Bayar DP minimal 50%\n5. Booking dikonfirmasi", sort_order:4 },
+  { id:"f5", question:"Apakah bisa cancel booking?", answer:"Pembatalan >7 hari: refund 50%.\nPembatalan 3-7 hari: refund 25%.\nPembatalan <3 hari: tidak ada refund.", sort_order:5 },
+];
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+const DEST_LIST = [
+  { id:"danautoba",   name:"Danau Toba",                      img:"https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=700&q=80" },
+  { id:"sabang",      name:"Sabang - Banda Aceh",              img:"https://images.unsplash.com/photo-1574482620811-1aa16ffe3c82?w=700&q=80" },
+  { id:"sibolga",     name:"Mursala - Kalimatung Sibolga",     img:"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=700&q=80" },
+  { id:"rafting",     name:"Rafting Bah Bolon",                img:"https://images.unsplash.com/photo-1530866495561-507c9faab2ed?w=700&q=80" },
+  { id:"tangkahan",   name:"Tangkahan",                        img:"https://images.unsplash.com/photo-1549366021-9f761d450615?w=700&q=80" },
+  { id:"combo",       name:"Combo Sumatera Utara Trip",        img:"https://images.unsplash.com/photo-1448375240586-882707db888b?w=700&q=80" },
+  { id:"sumbar",      name:"Sumatera Barat",                   img:"https://images.unsplash.com/photo-1596458834709-1e17e9efd95a?w=700&q=80" },
+  { id:"bukitlawang", name:"Bukit Lawang",                     img:"https://images.unsplash.com/photo-1551009175-15bdf9dcb580?w=700&q=80" },
+];
+
+const MONTHS_S = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+const MONTHS_F = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const fmt      = n => "Rp " + Number(n).toLocaleString("id-ID");
+const genId    = () => "t" + Date.now();
+const minPrice = t => t.pax_pricing?.length ? Math.min(...t.pax_pricing.map(p=>p.price)) : (t.price||0);
+const destOf   = id => DEST_LIST.find(d=>d.id===id);
+
+const emptyTrip = () => ({
+  id: genId(), destination:"danautoba", type:"open",
+  name:"", duration:"",
+  pax_pricing: [{ pax:1, label:"1 Pax", price:0 }],
+  hero_image:"", gallery:[], description:"",
+  itinerary: [{ day:1, title:"Day 1", rows:[["",""]] }],
+  termasuk:[""], tidak_termasuk:[""], catatan:[""],
+  jadwal:{}, faq:[{q:"",a:""}],
+  lokasi:"", lokasi_embed:"", ulasan:[], sort_order:99,
+});
+
+const Stars = ({ n, s=14 }) => (
+  <span style={{fontSize:s}}>
+    {[1,2,3,4,5].map(i=><span key={i} style={{color:i<=n?"#E8A020":"#D1D5DB"}}>★</span>)}
+  </span>
+);
+
+/* ============================================================
+   THEME
+   ============================================================ */
+const T = {
+  bg:    "#07111E",
+  card:  "#0D1E30",
+  blue:  "#1A6EDB",
+  bltl:  "#4DA3FF",
+  green: "#1A7A45",
+  glt:   "#2ECC71",
+  gold:  "#E8A020",
+  teal:  "#00BCD4",
+  red:   "#E53935",
+  gray:  "#7B8DA0",
+  white: "#FFFFFF",
+};
+
+/* ============================================================
+   MOBIL DATA  (gambar dari /public)
+   ============================================================ */
+const CARS = [
+  { id:"avanza",  name:"New Avanza 2024",    img:"/car-avanza.jpeg",  seats:7  },
+  { id:"innova",  name:"Innova Reborn 2024", img:"/car-innova.jpeg",  seats:8  },
+  { id:"hiace",   name:"Hiace Premio 2024",  img:"/car-hiace.jpeg",   seats:12 },
+];
+
+/* ============================================================
+   VIDEO UPLOAD ke Cloudinary (max 30MB)
+   ============================================================ */
+async function uploadVideoToCloudinary(file, onProgress) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("upload_preset", CFG.UPLOAD_PRESET);
+  fd.append("folder", "dearmatrip/videos");
+  fd.append("resource_type", "video");
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress)
+        onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) resolve(JSON.parse(xhr.responseText).secure_url);
+      else reject(new Error("Upload video gagal: " + xhr.responseText));
+    };
+    xhr.onerror = () => reject(new Error("Network error"));
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${CFG.CLOUD_NAME}/video/upload`);
+    xhr.send(fd);
+  });
+}
+
+/* ============================================================
+   VIDEO UPLOAD WIDGET  (max 30MB, langsung ke Cloudinary)
+   ============================================================ */
+function VideoUpload({ onDone, preview=null, index=0 }) {
+  const ref  = useRef();
+  const [prog, setProg] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [prev, setPrev] = useState(preview);
+  const [err,  setErr]  = useState("");
+
+  const handle = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 30 * 1024 * 1024) { setErr("❌ File terlalu besar! Maksimal 30MB"); return; }
+    setErr(""); setBusy(true); setProg(0);
+
+    // local object URL preview
+    const objUrl = URL.createObjectURL(file);
+    setPrev(objUrl);
+
+    try {
+      const url = await uploadVideoToCloudinary(file, setProg);
+      onDone(url);
+      URL.revokeObjectURL(objUrl);
+    } catch(ex) {
+      setErr("Upload gagal — cek CLOUD_NAME & UPLOAD_PRESET. " + ex.message);
+    } finally { setBusy(false); setProg(0); }
+  };
+
+  return (
+    <div>
+      <div
+        onClick={()=>!busy && ref.current?.click()}
+        style={{
+          border:"2px dashed #CBD5E1", borderRadius:10, padding:"10px 14px",
+          textAlign:"center", cursor:busy?"wait":"pointer", background:"#F8FAFF",
+          transition:"border .2s, background .2s",
+        }}
+        onMouseEnter={e=>{ if(!busy){e.currentTarget.style.borderColor=T.blue;e.currentTarget.style.background="#EFF6FF";}}}
+        onMouseLeave={e=>{ e.currentTarget.style.borderColor="#CBD5E1";e.currentTarget.style.background="#F8FAFF";}}>
+        <div style={{fontSize:"1.6rem",marginBottom:4}}>🎬</div>
+        <div style={{fontSize:".78rem",color:T.gray,fontWeight:600}}>
+          {busy ? `Uploading… ${prog}%` : "Klik untuk upload video (max 30MB)"}
+        </div>
+        <div style={{fontSize:".7rem",color:"#bbb",marginTop:2}}>MP4, MOV, AVI · Maks 30MB</div>
+      </div>
+      {busy && (
+        <div style={{height:5,background:"#E5E7EB",borderRadius:3,marginTop:6,overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${prog}%`,
+            background:`linear-gradient(90deg,${T.blue},${T.teal})`,
+            transition:"width .3s",borderRadius:3}}/>
+        </div>
+      )}
+      {err && <p style={{color:T.red,fontSize:".76rem",marginTop:4}}>{err}</p>}
+      {prev && (
+        <video src={prev} controls style={{marginTop:8,width:"100%",borderRadius:8,maxHeight:120}} muted/>
+      )}
+      <input ref={ref} type="file" accept="video/mp4,video/mov,video/avi,video/*"
+        style={{display:"none"}} onChange={handle}/>
+    </div>
+  );
+}
+function ImgUpload({ onDone, label="Upload Foto", preview=null, small=false }) {
+  const ref  = useRef();
+  const [prog, setProg]   = useState(0);
+  const [busy, setBusy]   = useState(false);
+  const [prev, setPrev]   = useState(preview);
+  const [err,  setErr]    = useState("");
+
+  const handle = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setErr(""); setBusy(true); setProg(0);
+    // local preview
+    const reader = new FileReader();
+    reader.onload = ev => setPrev(ev.target.result);
+    reader.readAsDataURL(file);
+
+    try {
+      const url = await uploadToCloudinary(file, setProg);
+      onDone(url);
+    } catch(ex) {
+      setErr("Upload gagal — cek CLOUD_NAME & UPLOAD_PRESET");
+      // fallback ke base64 lokal
+      const r2 = new FileReader();
+      r2.onload = ev => { onDone(ev.target.result); };
+      r2.readAsDataURL(file);
+    } finally { setBusy(false); }
+  };
+
+  const bStyle = {
+    border:"2px dashed #CBD5E1", borderRadius:10,
+    padding: small?"6px 10px":"12px 16px",
+    textAlign:"center", cursor:"pointer", background:"#F8FAFF",
+    display:"flex", alignItems:"center", gap:8,
+    transition:"border .2s, background .2s",
+  };
+
+  return (
+    <div>
+      <div style={bStyle}
+        onClick={()=>ref.current?.click()}
+        onMouseEnter={e=>{e.currentTarget.style.borderColor=T.blue;e.currentTarget.style.background="#EFF6FF";}}
+        onMouseLeave={e=>{e.currentTarget.style.borderColor="#CBD5E1";e.currentTarget.style.background="#F8FAFF";}}
+      >
+        <span style={{fontSize:small?"1rem":"1.4rem"}}>☁️</span>
+        <span style={{fontSize:".8rem",color:T.gray}}>
+          {busy ? `Uploading ${prog}%…` : label}
+        </span>
+      </div>
+      {busy && (
+        <div style={{height:4,background:"#E5E7EB",borderRadius:2,marginTop:4,overflow:"hidden"}}>
+          <div style={{height:"100%",width:`${prog}%`,background:`linear-gradient(90deg,${T.blue},${T.teal})`,transition:"width .3s"}} />
+        </div>
+      )}
+      {err && <p style={{color:T.red,fontSize:".76rem",marginTop:4}}>{err} (base64 digunakan)</p>}
+      {prev && <img src={prev} alt="" style={{marginTop:6,height:small?48:70,objectFit:"cover",borderRadius:8,display:"block"}} />}
+      <input ref={ref} type="file" accept="image/*" style={{display:"none"}} onChange={handle}/>
+    </div>
+  );
+}
+
+/* ============================================================
+   NAVBAR  — improved: better logo, reordered menu, smooth dd, no admin btn
+   ============================================================ */
+function Navbar({ go, trips, page, scrolled, onHamburger }) {
+  const [dd,  setDd]  = useState(null);
+  const [hov, setHov] = useState(null);
+  const timerRef      = useRef(null);
+
+  const tripsOf = (destId, type) => trips.filter(t=>t.destination===destId && t.type===type);
+
+  const openDd  = type => { clearTimeout(timerRef.current); setDd(type); setHov(null); };
+  const closeDd = ()   => { timerRef.current = setTimeout(()=>{ setDd(null); setHov(null); }, 120); };
+  const keepDd  = ()   => clearTimeout(timerRef.current);
+
+  const Dd = ({ type, label }) => (
+    <div style={{position:"relative"}}
+      onMouseEnter={()=>openDd(type)}
+      onMouseLeave={closeDd}
+    >
+      <span style={{
+        color: dd===type ? T.teal : "rgba(255,255,255,.88)",
+        cursor:"pointer", fontWeight:700, fontSize:".85rem",
+        letterSpacing:".06em", textTransform:"uppercase",
+        display:"flex", alignItems:"center", gap:5,
+        padding:"6px 0", transition:"color .2s",
+        borderBottom: dd===type ? `2px solid ${T.teal}` : "2px solid transparent",
+      }}>
+        {label}
+        <span style={{
+          fontSize:".55rem", opacity:.7,
+          transform: dd===type ? "rotate(180deg)" : "rotate(0deg)",
+          transition:"transform .25s",
+        }}>▾</span>
+      </span>
+
+      {/* dropdown panel */}
+      <div
+        onMouseEnter={keepDd}
+        onMouseLeave={closeDd}
+        style={{
+          position:"absolute", top:"calc(100% + 16px)", left:0,
+          background:"white", boxShadow:"0 28px 70px rgba(0,0,0,.18)",
+          borderRadius:20, display:"flex", minWidth:540, zIndex:999,
+          overflow:"hidden", border:"1px solid rgba(0,0,0,.06)",
+          opacity: dd===type ? 1 : 0,
+          transform: dd===type ? "translateY(0)" : "translateY(-10px)",
+          pointerEvents: dd===type ? "all" : "none",
+          transition:"opacity .22s ease, transform .22s ease",
+        }}>
+        {/* col 1 */}
+        <div style={{width:255, borderRight:"1px solid #F0F4FA", maxHeight:400, overflowY:"auto"}}>
+          <div style={{padding:"10px 20px 6px", fontSize:".7rem", color:T.gray,
+            fontWeight:800, letterSpacing:".1em", textTransform:"uppercase"}}>
+            Pilih Destinasi
+          </div>
+          {DEST_LIST.map(d=>{
+            const has = tripsOf(d.id,type).length>0;
+            if(!has) return null;
+            return (
+              <div key={d.id}
+                onMouseEnter={()=>setHov(d.id)}
+                style={{padding:"10px 20px", cursor:"pointer",
+                  background: hov===d.id ? "#EFF6FF" : "white",
+                  color: hov===d.id ? T.blue : "#222",
+                  fontWeight: hov===d.id ? 700 : 500, fontSize:".88rem",
+                  display:"flex", justifyContent:"space-between", alignItems:"center",
+                  borderBottom:"1px solid #F5F7FA", transition:"all .12s"}}>
+                <span>{d.name}</span>
+                <span style={{color: hov===d.id ? T.blue : "#ccc", fontSize:".8rem"}}>›</span>
+              </div>
+            );
+          })}
+        </div>
+        {/* col 2 */}
+        <div style={{width:285, padding:"6px 0", minHeight:120}}>
+          {hov ? (
+            <>
+              <div style={{padding:"10px 18px 6px", fontSize:".7rem", color:T.gray,
+                fontWeight:800, letterSpacing:".1em", textTransform:"uppercase"}}>
+                Paket Trip
+              </div>
+              {tripsOf(hov,type).map(tr=>(
+                <div key={tr.id}
+                  onClick={()=>{go("detail",{trip:tr}); setDd(null); setHov(null);}}
+                  style={{padding:"11px 18px", cursor:"pointer",
+                    borderBottom:"1px solid #F5F7FA", transition:"background .12s"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="#EFF6FF"}
+                  onMouseLeave={e=>e.currentTarget.style.background="white"}>
+                  <div style={{fontSize:".88rem", fontWeight:700, color:T.blue}}>{tr.name}</div>
+                  <div style={{fontSize:".76rem", color:T.gray, marginTop:2}}>
+                    Mulai {fmt(minPrice(tr))} · {tr.duration}
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div style={{display:"flex", alignItems:"center", justifyContent:"center",
+              height:"100%", color:"#ccc", fontSize:".82rem", padding:"2rem"}}>
+              ← Pilih destinasi
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const navBg = scrolled ? "rgba(7,17,30,.97)" : "rgba(7,17,30,.52)";
+
+  return (
+    <nav style={{
+      position:"fixed", top:0, left:0, right:0, zIndex:998,
+      background:navBg, backdropFilter:"blur(20px)",
+      height:78, display:"flex", alignItems:"center",
+      justifyContent:"space-between", padding:"0 4%",
+      borderBottom: scrolled ? "1px solid rgba(255,255,255,.08)" : "1px solid transparent",
+      transition:"background .35s, border .35s, box-shadow .35s",
+      boxShadow: scrolled ? "0 4px 30px rgba(0,0,0,.3)" : "none",
+    }}>
+
+      {/* ── LOGO — klik 5x untuk masuk admin ── */}
+      <div style={{cursor:"pointer", display:"flex", alignItems:"center", gap:12, flexShrink:0}}
+        onClick={()=>{
+          const now = Date.now();
+          const clicks = JSON.parse(sessionStorage.getItem("dm_lc")||"[]").filter(t=>now-t<2000);
+          clicks.push(now);
+          sessionStorage.setItem("dm_lc", JSON.stringify(clicks));
+          if(clicks.length>=5){ sessionStorage.removeItem("dm_lc"); go("admin"); }
+          else go("home");
+        }}>
+        <div style={{position:"relative"}}>
+          <img
+            src="/logo.png"
+            alt="Dearmatrip"
+            style={{height:50, objectFit:"contain",
+              filter:"brightness(1.1) drop-shadow(0 0 14px rgba(0,188,212,.45))"}}
+            onError={e=>{ e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }}
+          />
+          {/* Fallback text logo */}
+          <div style={{display:"none", flexDirection:"column", alignItems:"flex-start"}}>
+            <div style={{display:"flex", alignItems:"baseline", gap:3}}>
+              <span style={{fontFamily:"'Cormorant Garamond',serif", fontWeight:700,
+                fontSize:"1.55rem", color:"white", letterSpacing:"-.01em", lineHeight:1}}>Dear</span>
+              <span style={{fontFamily:"'Cormorant Garamond',serif", fontWeight:700,
+                fontSize:"1.55rem", color:T.teal, fontStyle:"italic", lineHeight:1}}>ma</span>
+              <span style={{fontFamily:"'Cormorant Garamond',serif", fontWeight:700,
+                fontSize:"1.55rem", color:"white", letterSpacing:"-.01em", lineHeight:1}}>trip</span>
+            </div>
+            <div style={{display:"flex", alignItems:"center", gap:5, marginTop:1}}>
+              <div style={{height:1, width:18, background:T.teal}}/>
+              <span style={{fontFamily:"'DM Sans',sans-serif", fontWeight:500,
+                fontSize:".52rem", color:"rgba(255,255,255,.45)", letterSpacing:".22em",
+                textTransform:"uppercase"}}>Jaya Transport</span>
+              <div style={{height:1, width:18, background:T.teal}}/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── HAMBURGER (mobile only) ── */}
+      <button onClick={onHamburger}
+        style={{display:"none",background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",
+          color:"white",width:42,height:42,borderRadius:10,cursor:"pointer",
+          fontSize:"1.3rem",alignItems:"center",justifyContent:"center",flexShrink:0}}
+        className="dm-hamburger">
+        ☰
+      </button>
+
+      {/* ── NAV LINKS — order: Beranda, Open Trip, Private Trip, Portofolio, About, FAQ ── */}
+      <div className="dm-nav-links" style={{display:"flex", alignItems:"center", gap:"1.5rem"}}>
+        {[["home","Beranda"]].map(([p,l])=>(
+          <span key={p} onClick={()=>go(p)}
+            style={{color: page===p ? T.teal : "rgba(255,255,255,.82)", cursor:"pointer",
+              fontWeight:700, fontSize:".84rem", letterSpacing:".06em", textTransform:"uppercase",
+              borderBottom: page===p ? `2px solid ${T.teal}` : "2px solid transparent",
+              paddingBottom:2, transition:"color .2s, border .2s"}}>
+            {l}
+          </span>
+        ))}
+        <Dd type="open"    label="Open Trip"    />
+        <Dd type="private" label="Private Trip" />
+        {[["portofolio","Portofolio"],["about","About"],["faq","FAQ"]].map(([p,l])=>(
+          <span key={p} onClick={()=>go(p)}
+            style={{color: page===p ? T.teal : "rgba(255,255,255,.82)", cursor:"pointer",
+              fontWeight:700, fontSize:".84rem", letterSpacing:".06em", textTransform:"uppercase",
+              borderBottom: page===p ? `2px solid ${T.teal}` : "2px solid transparent",
+              paddingBottom:2, transition:"color .2s, border .2s"}}>
+            {l}
+          </span>
+        ))}
+        <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip!`} target="_blank" rel="noopener noreferrer"
+          style={{background:"linear-gradient(135deg,#25D366,#128C7E)", color:"white",
+            padding:"9px 20px", borderRadius:50, textDecoration:"none", fontWeight:800,
+            fontSize:".82rem", display:"flex", alignItems:"center", gap:6,
+            boxShadow:"0 4px 18px rgba(37,211,102,.38)", transition:"transform .2s, box-shadow .2s"}}
+          onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.05)";e.currentTarget.style.boxShadow="0 6px 24px rgba(37,211,102,.55)";}}
+          onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 18px rgba(37,211,102,.38)";}}>
+          💬 WhatsApp
+        </a>
+      </div>
+    </nav>
+  );
+}
+
+/* ============================================================
+   HOME PAGE
+   ============================================================ */
+function HomePage({ go, trips }) {
+  const destWithTrips = DEST_LIST.filter(d=>trips.some(t=>t.destination===d.id));
+  const [hi, setHi] = useState(0);
+  const heroImgs = [
+    "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=1800&q=90",
+    "https://images.unsplash.com/photo-1574482620811-1aa16ffe3c82?w=1800&q=90",
+    "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1800&q=90",
+  ];
+  useEffect(()=>{ const t=setInterval(()=>setHi(i=>(i+1)%heroImgs.length),5500); return()=>clearInterval(t); },[]);
+
+  return (
+    <div>
+      {/* ── HERO ─────────────────────────────────────────── */}
+      <div style={{minHeight:"100vh",position:"relative",overflow:"hidden",
+        display:"flex",alignItems:"center"}}>
+        {heroImgs.map((img,i)=>(
+          <div key={i} style={{position:"absolute",inset:0,
+            backgroundImage:`url('${img}')`,backgroundSize:"cover",backgroundPosition:"center",
+            opacity:i===hi?1:0,transition:"opacity 1.4s ease"}}/>
+        ))}
+        {/* overlay */}
+        <div style={{position:"absolute",inset:0,
+          background:"linear-gradient(135deg,rgba(7,17,30,.92) 0%,rgba(7,17,30,.6) 55%,rgba(7,17,30,.75) 100%)"}}/>
+        {/* decorative orbs */}
+        <div style={{position:"absolute",top:"8%",right:"4%",width:440,height:440,borderRadius:"50%",
+          background:`radial-gradient(circle,rgba(0,188,212,.1) 0%,transparent 70%)`,pointerEvents:"none"}}/>
+        <div style={{position:"absolute",bottom:"12%",left:"2%",width:320,height:320,borderRadius:"50%",
+          background:`radial-gradient(circle,rgba(46,204,113,.08) 0%,transparent 70%)`,pointerEvents:"none"}}/>
+
+        <div style={{position:"relative",zIndex:1,maxWidth:960,margin:"0 auto",
+          padding:"110px 5% 90px",width:"100%"}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,
+            background:"rgba(0,188,212,.1)",border:"1px solid rgba(0,188,212,.32)",
+            color:T.teal,padding:"6px 20px",borderRadius:50,
+            fontSize:".76rem",fontWeight:800,letterSpacing:".1em",
+            textTransform:"uppercase",marginBottom:"2rem"}}>
+            <span style={{width:6,height:6,background:T.teal,borderRadius:"50%",
+              display:"inline-block",animation:"pulse 2s infinite"}}/>
+            Tour Operator Terpercaya — Medan, Sumatera
+          </div>
+
+          <h1 style={{fontFamily:"'Cormorant Garamond',serif",
+            fontSize:"clamp(3rem,8.5vw,5.8rem)",fontWeight:700,
+            color:"white",lineHeight:1.04,marginBottom:"1.2rem",letterSpacing:"-.02em"}}>
+            Jelajahi Keindahan<br/>
+            <span style={{color:T.teal,fontStyle:"italic"}}>Sumatera</span>
+            <span style={{color:"rgba(255,255,255,.5)",fontSize:".68em"}}> Bersama Kami</span>
+          </h1>
+
+          <p style={{fontSize:"1.07rem",color:"rgba(255,255,255,.65)",lineHeight:1.8,
+            maxWidth:640,marginBottom:"2.5rem"}}>
+            Liburan terbaikmu adalah prioritas kami! Pilihan paket&nbsp;
+            <strong style={{color:"rgba(255,255,255,.88)"}}>Open Trip, Private Trip &amp; Company Trip</strong>
+            &nbsp;— aman, nyaman &amp; menyenangkan.
+          </p>
+
+          <div className="dm-hero-btns" style={{display:"flex",gap:"1rem",flexWrap:"wrap"}}>
+            <button onClick={()=>document.getElementById("dest")?.scrollIntoView({behavior:"smooth"})}
+              style={{background:"linear-gradient(135deg,#1A7A45,#2ECC71)",color:"white",
+                padding:".9rem 2.3rem",borderRadius:50,border:"none",cursor:"pointer",
+                fontFamily:"inherit",fontWeight:800,fontSize:".97rem",
+                boxShadow:"0 8px 30px rgba(46,204,113,.38)"}}>
+              🗺 Lihat Paket Wisata
+            </button>
+            <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip, saya ingin tanya paket wisata`}
+              target="_blank"
+              style={{border:"2px solid rgba(255,255,255,.28)",color:"white",
+                padding:".9rem 2.3rem",borderRadius:50,textDecoration:"none",
+                fontWeight:700,fontSize:".97rem",transition:"border .2s"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor="rgba(255,255,255,.7)"}
+              onMouseLeave={e=>e.currentTarget.style.borderColor="rgba(255,255,255,.28)"}>
+              💬 Konsultasi Gratis
+            </a>
+          </div>
+
+          {/* stats */}
+          <div style={{display:"flex",gap:"3rem",flexWrap:"wrap",
+            marginTop:"4rem",paddingTop:"2rem",
+            borderTop:"1px solid rgba(255,255,255,.1)"}}>
+            {[["6+","Tahun"],["8+","Destinasi"],["5000+","Wisatawan"],["4.9★","Rating"]].map(([n,l])=>(
+              <div key={l}>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2.4rem",
+                  fontWeight:700,color:"white",lineHeight:1}}>
+                  <span style={{color:T.teal}}>{n}</span>
+                </div>
+                <div style={{fontSize:".7rem",color:"rgba(255,255,255,.42)",
+                  textTransform:"uppercase",letterSpacing:".08em",marginTop:5}}>{l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* slide dots */}
+        <div style={{position:"absolute",bottom:30,left:"50%",transform:"translateX(-50%)",
+          display:"flex",gap:8,zIndex:2}}>
+          {heroImgs.map((_,i)=>(
+            <div key={i} onClick={()=>setHi(i)}
+              style={{width:i===hi?26:8,height:8,borderRadius:4,cursor:"pointer",
+                background:i===hi?T.teal:"rgba(255,255,255,.28)",transition:"all .35s"}}/>
+          ))}
+        </div>
+      </div>
+
+      {/* ── DESTINATIONS ─────────────────────────────────── */}
+      <div id="dest" style={{padding:"100px 5%",background:"#F8FBFD"}}>
+        <div style={{maxWidth:1200,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:"3.5rem"}}>
+            <span style={{display:"inline-block",background:"rgba(26,110,219,.09)",color:T.blue,
+              padding:"5px 18px",borderRadius:50,fontSize:".73rem",fontWeight:800,
+              letterSpacing:".1em",textTransform:"uppercase",marginBottom:"1rem"}}>
+              🌿 Destinasi Pilihan
+            </span>
+            <h2 style={{fontFamily:"'Cormorant Garamond',serif",
+              fontSize:"clamp(2rem,4vw,3.2rem)",fontWeight:700,
+              color:"#081828",marginBottom:".8rem",letterSpacing:"-.02em"}}>
+              Paket Trip <span style={{color:T.blue,fontStyle:"italic"}}>Terbaik</span> Kami
+            </h2>
+            <p style={{color:T.gray,maxWidth:540,margin:"0 auto",lineHeight:1.7}}>
+              Destinasi wisata alam terbaik Sumatera Utara, Aceh, dan Sumatera Barat.
+            </p>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:"1.5rem"}}>
+            {destWithTrips.map(d=><DestCard key={d.id} dest={d} trips={trips} go={go}/>)}
+          </div>
+        </div>
+      </div>
+
+      {/* ── WHY US ───────────────────────────────────────── */}
+      <div style={{padding:"100px 5%",
+        background:"linear-gradient(160deg,#07111E 0%,#0A2218 100%)",
+        position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",inset:0,
+          backgroundImage:`radial-gradient(circle at 18% 55%, rgba(0,188,212,.07) 0%,transparent 48%),
+                           radial-gradient(circle at 82% 20%, rgba(46,204,113,.07) 0%,transparent 48%)`,
+          pointerEvents:"none"}}/>
+        <div style={{maxWidth:1200,margin:"0 auto",position:"relative",zIndex:1}}>
+          <div style={{textAlign:"center",marginBottom:"3.5rem"}}>
+            <h2 style={{fontFamily:"'Cormorant Garamond',serif",
+              fontSize:"clamp(2rem,4vw,3.2rem)",fontWeight:700,color:"white",letterSpacing:"-.02em"}}>
+              Why Choose <span style={{color:T.teal,fontStyle:"italic"}}>Dearmatrip?</span>
+            </h2>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"1.4rem"}}>
+            {[
+              ["🗺️","Destinasi Viral","Destinasi wisata alam terbaik Sumatera untuk pengalaman yang autentik."],
+              ["💰","Harga Kompetitif","Harga sebanding fasilitas premium yang anda dapatkan di setiap trip."],
+              ["⚡","Fast Respon 24 Jam","Booking via WhatsApp dengan pelayanan responsif setiap saat."],
+              ["📸","Dokumentasi Terbaik","MirrorLess & kamera underwater. File original dikirim langsung."],
+              ["🧭","Guide Profesional","Tim guide ramah & berpengetahuan luas tentang wisata Sumatera."],
+              ["🛡️","Aman & Terpercaya","Berpengalaman 6+ tahun melayani ribuan wisatawan."],
+            ].map(([ico,title,desc])=>(
+              <div key={title}
+                style={{background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.07)",
+                  borderRadius:20,padding:"2rem 1.6rem",textAlign:"center",transition:"all .3s"}}
+                onMouseEnter={e=>{e.currentTarget.style.background="rgba(0,188,212,.08)";e.currentTarget.style.borderColor="rgba(0,188,212,.22)";e.currentTarget.style.transform="translateY(-4px)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,.05)";e.currentTarget.style.borderColor="rgba(255,255,255,.07)";e.currentTarget.style.transform="none";}}>
+                <div style={{fontSize:"2.8rem",marginBottom:"1rem"}}>{ico}</div>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,color:"white",
+                  fontSize:"1.1rem",marginBottom:".5rem"}}>{title}</div>
+                <div style={{fontSize:".84rem",color:"rgba(255,255,255,.48)",lineHeight:1.65}}>{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── CTA ──────────────────────────────────────────── */}
+      <div style={{padding:"80px 5%",background:`linear-gradient(135deg,${T.blue},#0A3E8C)`,textAlign:"center"}}>
+        <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(1.9rem,4vw,3rem)",
+          fontWeight:700,color:"white",marginBottom:"1rem"}}>Siap Untuk Petualangan?</h2>
+        <p style={{color:"rgba(255,255,255,.68)",marginBottom:"2rem",fontSize:"1rem"}}>
+          Hubungi kami sekarang dan dapatkan penawaran terbaik!
+        </p>
+        <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip, saya ingin booking!`} target="_blank"
+          style={{background:"#25D366",color:"white",padding:"1rem 2.5rem",borderRadius:50,
+            textDecoration:"none",fontWeight:800,fontSize:"1rem",
+            display:"inline-flex",alignItems:"center",gap:10,
+            boxShadow:"0 8px 28px rgba(0,0,0,.25)"}}>
+          💬 Chat WhatsApp Sekarang
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function DestCard({ dest, trips, go }) {
+  const dt = trips.filter(t=>t.destination===dest.id);
+  const open = dt.filter(t=>t.type==="open");
+  const priv = dt.filter(t=>t.type==="private");
+  const mp   = dt.length ? Math.min(...dt.map(t=>minPrice(t))) : null;
+  const [hov,setHov] = useState(false);
+  return (
+    <div style={{borderRadius:20,overflow:"hidden",position:"relative",
+      aspectRatio:"3/4",cursor:"pointer",
+      boxShadow:hov?"0 22px 60px rgba(0,0,0,.28)":"0 6px 24px rgba(0,0,0,.1)",
+      transform:hov?"translateY(-10px)":"none",transition:"all .35s"}}
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      onClick={()=>open.length===1?go("detail",{trip:open[0]}):go("destpage",{destId:dest.id})}>
+      <img src={dest.img} alt={dest.name}
+        style={{width:"100%",height:"100%",objectFit:"cover",
+          transform:hov?"scale(1.1)":"scale(1)",transition:"transform .6s"}}/>
+      <div style={{position:"absolute",inset:0,
+        background:"linear-gradient(to top,rgba(7,17,30,.95) 0%,rgba(7,17,30,.2) 55%,transparent 100%)"}}/>
+      {hov && <div style={{position:"absolute",inset:0,border:`2px solid rgba(0,188,212,.3)`,
+        borderRadius:20,pointerEvents:"none"}}/>}
+      <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"1.5rem"}}>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.25rem",
+          fontWeight:700,color:"white",marginBottom:".5rem",lineHeight:1.2}}>{dest.name}</div>
+        <div style={{display:"flex",gap:".4rem",flexWrap:"wrap",marginBottom:".6rem"}}>
+          {open.length>0 && <span style={{background:"rgba(0,188,212,.2)",border:"1px solid rgba(0,188,212,.5)",
+            color:T.teal,padding:"2px 9px",borderRadius:50,fontSize:".7rem",fontWeight:700}}>
+            Open Trip ({open.length})</span>}
+          {priv.length>0 && <span style={{background:"rgba(255,255,255,.13)",border:"1px solid rgba(255,255,255,.28)",
+            color:"white",padding:"2px 9px",borderRadius:50,fontSize:".7rem",fontWeight:700}}>
+            Private ({priv.length})</span>}
+        </div>
+        {mp && <div style={{color:T.gold,fontWeight:800,fontSize:".92rem"}}>Mulai {fmt(mp)}</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   DEST PAGE
+   ============================================================ */
+function DestPage({ destId, trips, go }) {
+  const dest = destOf(destId);
+  const dt   = trips.filter(t=>t.destination===destId);
+  const [tab,setTab] = useState(dt.some(t=>t.type==="open")?"open":"private");
+  return (
+    <div style={{paddingTop:70}}>
+      <div style={{position:"relative",height:300,overflow:"hidden"}}>
+        <img src={dest?.img} alt={dest?.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+        <div style={{position:"absolute",inset:0,
+          background:"linear-gradient(to top,rgba(7,17,30,.92),rgba(7,17,30,.3))"}}/>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"0 5% 2rem"}}>
+          <div style={{color:"rgba(255,255,255,.5)",fontSize:".82rem",marginBottom:".5rem"}}>
+            <span onClick={()=>go("home")} style={{cursor:"pointer",color:T.teal}}>Beranda</span>
+            {" / "}{dest?.name}
+          </div>
+          <h1 style={{fontFamily:"'Cormorant Garamond',serif",
+            fontSize:"clamp(2rem,5vw,3rem)",fontWeight:700,color:"white"}}>{dest?.name}</h1>
+        </div>
+      </div>
+      <div style={{maxWidth:1200,margin:"0 auto",padding:"2.5rem 5%"}}>
+        <div style={{display:"flex",gap:".5rem",marginBottom:"2rem"}}>
+          {["open","private"].map(tp=>(
+            <button key={tp} onClick={()=>setTab(tp)}
+              style={{padding:".6rem 1.6rem",borderRadius:50,border:"none",cursor:"pointer",
+                fontFamily:"inherit",fontWeight:700,fontSize:".88rem",
+                background:tab===tp?T.blue:"#F0F4FA",color:tab===tp?"white":"#555",
+                boxShadow:tab===tp?"0 4px 16px rgba(26,110,219,.3)":"none",transition:"all .2s"}}>
+              {tp==="open"?"Open Trip":"Private Trip"}
+            </button>
+          ))}
+        </div>
+        {dt.filter(t=>t.type===tab).length===0
+          ? <p style={{color:T.gray}}>Belum ada paket tersedia.</p>
+          : <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:"1.5rem"}}>
+              {dt.filter(t=>t.type===tab).map(tr=><TripCard key={tr.id} trip={tr} go={go}/>)}
+            </div>
+        }
+      </div>
+    </div>
+  );
+}
+
+function TripCard({ trip, go }) {
+  const [hov,setHov]=useState(false);
+  const mp = minPrice(trip);
+  return (
+    <div style={{borderRadius:20,overflow:"hidden",background:"white",
+      border:"1px solid #E8EFF9",
+      boxShadow:hov?"0 20px 50px rgba(26,110,219,.15)":"0 4px 20px rgba(0,0,0,.06)",
+      transform:hov?"translateY(-7px)":"none",transition:"all .3s",cursor:"pointer"}}
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      onClick={()=>go("detail",{trip})}>
+      <div style={{position:"relative",height:210,overflow:"hidden"}}>
+        <img src={trip.hero_image||"https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=600"}
+          alt={trip.name}
+          style={{width:"100%",height:"100%",objectFit:"cover",
+            transform:hov?"scale(1.07)":"scale(1)",transition:"transform .5s"}}/>
+        <span style={{position:"absolute",top:14,left:14,
+          background:trip.type==="open"?T.blue:"#7C3AED",
+          color:"white",padding:"4px 12px",borderRadius:50,fontSize:".72rem",fontWeight:700,
+          textTransform:"uppercase"}}>
+          {trip.type==="open"?"Open Trip":"Private Trip"}
+        </span>
+        <span style={{position:"absolute",top:14,right:14,
+          background:"rgba(7,17,30,.7)",color:"white",padding:"4px 10px",borderRadius:50,fontSize:".72rem"}}>
+          ⏱ {trip.duration}
+        </span>
+      </div>
+      <div style={{padding:"1.4rem"}}>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.1rem",fontWeight:700,
+          color:"#081828",marginBottom:".5rem",lineHeight:1.3}}>{trip.name}</div>
+        {/* pax badges */}
+        {trip.pax_pricing?.length>1 && (
+          <div style={{display:"flex",gap:".35rem",flexWrap:"wrap",marginBottom:".8rem"}}>
+            {trip.pax_pricing.slice(0,3).map((p,i)=>(
+              <span key={i} style={{background:"#EFF6FF",color:T.blue,
+                padding:"2px 8px",borderRadius:6,fontSize:".7rem",fontWeight:700}}>
+                {p.label}: {fmt(p.price)}
+              </span>
+            ))}
+            {trip.pax_pricing.length>3 &&
+              <span style={{color:T.gray,fontSize:".7rem",padding:"2px 0"}}>+{trip.pax_pricing.length-3} lagi</span>}
+          </div>
+        )}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+          borderTop:"1px solid #F0F4FC",paddingTop:".8rem"}}>
+          <div>
+            <div style={{fontSize:".7rem",color:"#9ca3af"}}>Mulai dari</div>
+            <div style={{fontSize:"1.15rem",fontWeight:800,color:T.blue}}>{fmt(mp)}</div>
+          </div>
+          <div style={{background:`linear-gradient(135deg,${T.blue},${T.bltl})`,color:"white",
+            padding:".5rem 1.2rem",borderRadius:50,fontSize:".82rem",fontWeight:700}}>
+            Detail →
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   TRIP DETAIL PAGE  — full landing page per trip
+   ============================================================ */
+function TripDetailPage({ trip, go, allTrips }) {
+  const [tab,setTab]       = useState("informasi");
+  const [faqO,setFaqO]     = useState(null);
+  const [galI,setGalI]     = useState(0);
+  const [paxI,setPaxI]     = useState(0);
+  const dest               = destOf(trip.destination);
+  const related            = allTrips.filter(t=>t.destination===trip.destination&&t.id!==trip.id);
+  const hasJadwal          = trip.type==="open" && trip.jadwal && Object.keys(trip.jadwal).length>0;
+  const selPrice           = trip.pax_pricing?.[paxI]?.price ?? minPrice(trip);
+
+  const TABS = ["Informasi","Itinerary","Catatan","Ulasan","Lokasi","FAQ"];
+
+  return (
+    <div style={{paddingTop:70}}>
+      {/* hero */}
+      <div style={{position:"relative",height:460,overflow:"hidden"}}>
+        <img src={trip.hero_image||dest?.img||""} alt={trip.name}
+          style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+        <div style={{position:"absolute",inset:0,
+          background:"linear-gradient(to top,rgba(7,17,30,.96) 0%,rgba(7,17,30,.4) 60%,transparent 100%)"}}/>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,padding:"2rem 5%"}}>
+          <div style={{color:"rgba(255,255,255,.5)",fontSize:".82rem",marginBottom:".5rem"}}>
+            <span onClick={()=>go("home")} style={{cursor:"pointer",color:T.teal}}>Beranda</span>
+            {" / "}
+            <span onClick={()=>go("destpage",{destId:trip.destination})}
+              style={{cursor:"pointer",color:T.teal}}>{dest?.name}</span>
+            {" / "}{trip.name}
+          </div>
+          <h1 style={{fontFamily:"'Cormorant Garamond',serif",
+            fontSize:"clamp(1.8rem,4vw,3rem)",fontWeight:700,color:"white",
+            marginBottom:".8rem",letterSpacing:"-.01em"}}>{trip.name}</h1>
+          <div style={{display:"flex",gap:".8rem",flexWrap:"wrap"}}>
+            <span style={{background:trip.type==="open"?"rgba(0,188,212,.18)":"rgba(124,58,237,.18)",
+              border:`1px solid ${trip.type==="open"?T.teal:"#7C3AED"}`,
+              color:trip.type==="open"?T.teal:"#A78BFA",
+              padding:"5px 14px",borderRadius:50,fontSize:".82rem",fontWeight:700}}>
+              {trip.type==="open"?"Open Trip":"Private Trip"}
+            </span>
+            <span style={{background:"rgba(255,255,255,.1)",color:"white",
+              padding:"5px 14px",borderRadius:50,fontSize:".82rem"}}>⏱ {trip.duration}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* tab bar */}
+      <div style={{position:"sticky",top:70,zIndex:50,background:"white",
+        borderBottom:"2px solid #E8EFF9",overflowX:"auto",
+        boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
+        <div style={{display:"flex",padding:"0 5%",minWidth:"max-content",
+          maxWidth:1200,margin:"0 auto"}}>
+          {TABS.map(t=>(
+            <button key={t} onClick={()=>setTab(t.toLowerCase())}
+              style={{padding:".9rem 1.5rem",border:"none",background:"none",cursor:"pointer",
+                fontFamily:"inherit",fontWeight:700,fontSize:".88rem",
+                color:tab===t.toLowerCase()?T.blue:T.gray,
+                borderBottom:tab===t.toLowerCase()?`3px solid ${T.blue}`:"3px solid transparent",
+                transition:"all .2s",whiteSpace:"nowrap"}}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* content + sidebar */}
+      <div style={{maxWidth:1200,margin:"0 auto",padding:"2.5rem 5%",
+        display:"grid",gridTemplateColumns:"1fr 360px",gap:"2.5rem",alignItems:"start"}}>
+        <div>
+          {/* ─ INFORMASI ─ */}
+          {tab==="informasi" && (
+            <div>
+              <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
+                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>Tentang Trip Ini</h2>
+              <p style={{color:"#555",lineHeight:1.85,marginBottom:"1.5rem",fontSize:".95rem"}}>
+                {trip.description}
+              </p>
+              {/* gallery */}
+              {trip.gallery?.length>0 && (
+                <div style={{marginBottom:"2rem"}}>
+                  <div style={{borderRadius:16,overflow:"hidden",height:320,
+                    marginBottom:".8rem",position:"relative"}}>
+                    <img src={trip.gallery[galI]} alt=""
+                      style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    {trip.gallery.length>1 && <>
+                      <button onClick={()=>setGalI(i=>(i-1+trip.gallery.length)%trip.gallery.length)}
+                        style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",
+                          background:"rgba(0,0,0,.55)",color:"white",border:"none",
+                          width:36,height:36,borderRadius:"50%",cursor:"pointer",fontSize:"1.1rem"}}>‹</button>
+                      <button onClick={()=>setGalI(i=>(i+1)%trip.gallery.length)}
+                        style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
+                          background:"rgba(0,0,0,.55)",color:"white",border:"none",
+                          width:36,height:36,borderRadius:"50%",cursor:"pointer",fontSize:"1.1rem"}}>›</button>
+                    </>}
+                  </div>
+                  <div style={{display:"flex",gap:".5rem",flexWrap:"wrap"}}>
+                    {trip.gallery.map((img,i)=>(
+                      <div key={i} onClick={()=>setGalI(i)}
+                        style={{width:76,height:56,borderRadius:10,overflow:"hidden",
+                          cursor:"pointer",border:galI===i?`3px solid ${T.blue}`:"3px solid transparent",
+                          transition:"border .2s"}}>
+                        <img src={img} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.5rem"}}>
+                <div style={{background:"#F0FBF4",borderRadius:16,padding:"1.4rem",border:"1px solid #A7F3D0"}}>
+                  <h3 style={{fontWeight:800,color:T.green,marginBottom:"1rem",fontSize:".95rem"}}>✅ Termasuk</h3>
+                  {trip.termasuk?.map((x,i)=>(
+                    <div key={i} style={{display:"flex",gap:".5rem",alignItems:"flex-start",
+                      marginBottom:".5rem",fontSize:".86rem",color:"#333"}}>
+                      <span style={{color:"#10B981",fontWeight:900,marginTop:1,flexShrink:0}}>•</span>{x}
+                    </div>
+                  ))}
+                </div>
+                <div style={{background:"#FFF1F1",borderRadius:16,padding:"1.4rem",border:"1px solid #FECACA"}}>
+                  <h3 style={{fontWeight:800,color:T.red,marginBottom:"1rem",fontSize:".95rem"}}>❌ Tidak Termasuk</h3>
+                  {trip.tidak_termasuk?.map((x,i)=>(
+                    <div key={i} style={{display:"flex",gap:".5rem",alignItems:"flex-start",
+                      marginBottom:".5rem",fontSize:".86rem",color:"#333"}}>
+                      <span style={{color:T.red,fontWeight:900,marginTop:1,flexShrink:0}}>•</span>{x}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─ ITINERARY ─ */}
+          {tab==="itinerary" && (
+            <div>
+              <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
+                fontSize:"1.7rem",marginBottom:"1.5rem",color:"#081828"}}>Itinerary Perjalanan</h2>
+              {trip.itinerary?.map((day,di)=>(
+                <div key={di} style={{marginBottom:"2rem"}}>
+                  <div style={{background:`linear-gradient(135deg,${T.blue},${T.bltl})`,
+                    color:"white",padding:".6rem 1.5rem",borderRadius:50,fontWeight:800,
+                    fontSize:".88rem",display:"inline-block",marginBottom:"1rem"}}>
+                    {day.title||`Day ${day.day}`}
+                  </div>
+                  <div style={{borderRadius:14,overflow:"hidden",border:"1px solid #E8EFF9"}}>
+                    {day.rows?.map((row,ri)=>(
+                      <div key={ri} style={{display:"flex",
+                        borderBottom:ri<day.rows.length-1?"1px solid #E8EFF9":"none"}}>
+                        <div style={{padding:".75rem 1rem",color:"#555",fontWeight:700,
+                          width:170,flexShrink:0,borderRight:"1px solid #E8EFF9",
+                          background:"#F8FAFF",fontSize:".84rem"}}>{row[0]}</div>
+                        <div style={{padding:".75rem 1rem",color:"#333",fontSize:".88rem",lineHeight:1.5}}>{row[1]}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {/* jadwal — hanya open trip */}
+              {hasJadwal && (
+                <div style={{marginTop:"2.5rem"}}>
+                  <h3 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
+                    fontSize:"1.3rem",marginBottom:"1rem",color:"#081828"}}>
+                    📅 Jadwal Open Trip {dest?.name}
+                  </h3>
+                  <div style={{overflowX:"auto",borderRadius:14,border:"1px solid #E8EFF9"}}>
+                    <table style={{borderCollapse:"collapse",minWidth:"100%"}}>
+                      <thead>
+                        <tr>{MONTHS_S.map(m=>(
+                          <th key={m} style={{padding:".7rem .8rem",background:T.blue,
+                            color:"white",fontWeight:700,whiteSpace:"nowrap",fontSize:".78rem"}}>
+                            {MONTHS_F[MONTHS_S.indexOf(m)]}
+                          </th>
+                        ))}</tr>
+                      </thead>
+                      <tbody>
+                        {[0,1,2,3,4].map(ri=>(
+                          <tr key={ri} style={{background:ri%2===0?"white":"#F8FAFF"}}>
+                            {MONTHS_S.map(m=>{
+                              const dates=(trip.jadwal[m]||[]);
+                              return (
+                                <td key={m} style={{padding:".6rem .8rem",border:"1px solid #E8EFF9",
+                                  textAlign:"center",color:dates[ri]?T.blue:"#ccc",
+                                  fontWeight:dates[ri]?700:400,whiteSpace:"nowrap",fontSize:".82rem"}}>
+                                  {dates[ri]||"—"}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─ CATATAN ─ */}
+          {tab==="catatan" && (
+            <div>
+              <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
+                fontSize:"1.7rem",marginBottom:"1.2rem",color:"#081828"}}>Catatan Penting</h2>
+              <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:16,padding:"1.5rem"}}>
+                {trip.catatan?.map((c,i)=>(
+                  <div key={i} style={{display:"flex",gap:".7rem",alignItems:"flex-start",
+                    marginBottom:".8rem",fontSize:".9rem",color:"#444"}}>
+                    <span style={{color:"#F59E0B",fontSize:"1.1rem",marginTop:1}}>⚠</span>
+                    <span>{c}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ─ ULASAN ─ */}
+          {tab==="ulasan" && (
+            <div>
+              <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
+                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>Ulasan Peserta</h2>
+              {(!trip.ulasan||trip.ulasan.length===0)
+                ? <p style={{color:T.gray}}>Belum ada ulasan.</p>
+                : <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
+                    {trip.ulasan.map((u,i)=>(
+                      <div key={i} style={{background:"#F8FAFF",borderRadius:16,
+                        padding:"1.4rem",border:"1px solid #E8EFF9"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",
+                          alignItems:"flex-start",marginBottom:".6rem"}}>
+                          <div>
+                            <div style={{fontWeight:800,color:"#081828"}}>{u.nama}</div>
+                            <Stars n={u.rating}/>
+                          </div>
+                          <div style={{fontSize:".78rem",color:T.gray}}>{u.tanggal}</div>
+                        </div>
+                        <p style={{color:"#555",lineHeight:1.7,margin:0,fontSize:".9rem"}}>{u.komentar}</p>
+                      </div>
+                    ))}
+                  </div>
+              }
+            </div>
+          )}
+
+          {/* ─ LOKASI ─ */}
+          {tab==="lokasi" && (
+            <div>
+              <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
+                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>Lokasi</h2>
+              {trip.lokasi && <div style={{marginBottom:"1rem",color:"#555",fontSize:".92rem"}}>📍 {trip.lokasi}</div>}
+              {trip.lokasi_embed
+                ? <iframe src={trip.lokasi_embed} width="100%" height="400"
+                    style={{border:0,borderRadius:16}} allowFullScreen loading="lazy" title="map"/>
+                : <div style={{background:"#F8FAFF",borderRadius:16,height:200,
+                    display:"flex",alignItems:"center",justifyContent:"center",color:T.gray}}>
+                    Peta belum tersedia
+                  </div>
+              }
+            </div>
+          )}
+
+          {/* ─ FAQ ─ */}
+          {tab==="faq" && (
+            <div>
+              <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
+                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>FAQ</h2>
+              {trip.faq?.map((item,i)=>(
+                <div key={i} style={{border:"1px solid #E8EFF9",borderRadius:14,
+                  marginBottom:".7rem",overflow:"hidden"}}>
+                  <div onClick={()=>setFaqO(faqO===i?null:i)}
+                    style={{padding:"1rem 1.4rem",display:"flex",justifyContent:"space-between",
+                      alignItems:"center",cursor:"pointer",
+                      background:faqO===i?"#EFF6FF":"white",
+                      fontWeight:700,fontSize:".9rem",color:"#081828"}}>
+                    <span>{i+1}. {item.q}</span>
+                    <span style={{color:T.blue,fontSize:"1.2rem",
+                      transform:faqO===i?"rotate(180deg)":"none",transition:"transform .2s"}}>⌄</span>
+                  </div>
+                  {faqO===i && (
+                    <div style={{padding:".8rem 1.4rem 1rem",background:"white",
+                      color:"#555",fontSize:".88rem",lineHeight:1.75,
+                      borderTop:"1px solid #E8EFF9"}}>{item.a}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ─ SIDEBAR ─ */}
+        <div style={{position:"sticky",top:140}}>
+          <div style={{background:"white",border:"1px solid #E8EFF9",borderRadius:22,
+            padding:"1.8rem",boxShadow:"0 8px 30px rgba(0,0,0,.1)",marginBottom:"1.2rem"}}>
+            {/* pax selector */}
+            {trip.pax_pricing?.length>0 && (
+              <div style={{marginBottom:"1.2rem"}}>
+                <div style={{fontSize:".75rem",fontWeight:700,color:T.gray,
+                  marginBottom:".7rem",letterSpacing:".06em",textTransform:"uppercase"}}>
+                  Pilih Jumlah Pax
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:".5rem"}}>
+                  {trip.pax_pricing.map((p,i)=>{
+                    const car = CARS.find(c=>c.id===p.car);
+                    const sel = paxI===i;
+                    return (
+                      <div key={i} onClick={()=>setPaxI(i)}
+                        style={{
+                          padding:".65rem .9rem",borderRadius:12,cursor:"pointer",
+                          border:sel?`2px solid ${T.blue}`:"2px solid #E5E7EB",
+                          background:sel?"#EFF6FF":"white",transition:"all .2s",
+                          display:"flex",alignItems:"center",gap:10,
+                        }}>
+                        {car && (
+                          <img src={car.img} alt={car.name}
+                            style={{width:64,height:38,objectFit:"contain",flexShrink:0}}/>
+                        )}
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:700,fontSize:".85rem",color:sel?T.blue:"#333"}}>
+                            {p.label}
+                          </div>
+                          {car && (
+                            <div style={{fontSize:".72rem",color:"#9ca3af",marginTop:1}}>{car.name}</div>
+                          )}
+                        </div>
+                        <div style={{fontWeight:800,fontSize:".88rem",color:sel?T.blue:T.gray,flexShrink:0}}>
+                          {fmt(p.price)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div style={{fontSize:".75rem",color:"#9ca3af",marginBottom:".2rem"}}>Biaya per orang</div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2.2rem",
+              fontWeight:700,color:T.blue,marginBottom:"1.4rem",lineHeight:1}}>
+              {fmt(selPrice)}
+            </div>
+            <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip! Saya ingin booking ${trip.name}${trip.pax_pricing?.[paxI]?` (${trip.pax_pricing[paxI].label})`:""}`}
+              target="_blank"
+              style={{display:"block",background:"linear-gradient(135deg,#25D366,#128C7E)",
+                color:"white",padding:"1rem",borderRadius:14,textAlign:"center",
+                textDecoration:"none",fontWeight:800,fontSize:".98rem",marginBottom:".8rem"}}>
+              💬 Book via WhatsApp
+            </a>
+            <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip! Saya ingin tanya tentang ${trip.name}`}
+              target="_blank"
+              style={{display:"block",border:`2px solid ${T.blue}`,color:T.blue,
+                padding:".8rem",borderRadius:14,textAlign:"center",
+                textDecoration:"none",fontWeight:700,fontSize:".88rem",marginBottom:"1rem"}}>
+              Tanya Dulu
+            </a>
+            <div style={{borderTop:"1px solid #E8EFF9",paddingTop:"1rem",
+              display:"flex",flexDirection:"column",gap:".5rem"}}>
+              {[["⏱","Durasi",trip.duration],["👥","Pax",trip.pax_pricing?.[paxI]?.label||"-"],["🗺","Dest",dest?.name]].map(([ico,l,v])=>(
+                <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:".84rem"}}>
+                  <span style={{color:T.gray}}>{ico} {l}</span>
+                  <span style={{fontWeight:700,color:"#081828"}}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {related.length>0 && (
+            <div style={{background:"#F8FAFF",borderRadius:20,padding:"1.4rem"}}>
+              <div style={{fontWeight:800,color:"#081828",marginBottom:"1rem",fontSize:".95rem"}}>
+                Trip Lainnya
+              </div>
+              {related.slice(0,3).map(rt=>(
+                <div key={rt.id} onClick={()=>go("detail",{trip:rt})}
+                  style={{display:"flex",gap:".8rem",marginBottom:".8rem",cursor:"pointer",
+                    padding:".6rem",borderRadius:12,transition:"background .2s"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="#E8EFF9"}
+                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  <img src={rt.hero_image||dest?.img} alt=""
+                    style={{width:58,height:44,objectFit:"cover",borderRadius:8,flexShrink:0}}/>
+                  <div>
+                    <div style={{fontSize:".82rem",fontWeight:700,color:"#081828",lineHeight:1.3}}>{rt.name}</div>
+                    <div style={{fontSize:".74rem",color:T.blue,fontWeight:700,marginTop:2}}>
+                      Mulai {fmt(minPrice(rt))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   FAQ PAGE
+   ============================================================ */
+function FAQPage({ go, faqList }) {
+  const [open,setOpen]=useState(null);
+  return (
+    <div style={{paddingTop:70}}>
+      <div style={{background:`linear-gradient(135deg,${T.blue},#0A3E8C)`,
+        padding:"4rem 5%",textAlign:"center"}}>
+        <span onClick={()=>go("home")} style={{color:T.teal,cursor:"pointer",fontSize:".82rem"}}>Beranda</span>
+        <span style={{color:"rgba(255,255,255,.35)",margin:"0 .5rem"}}>/</span>
+        <span style={{color:"rgba(255,255,255,.55)",fontSize:".82rem"}}>FAQ</span>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"3rem",
+          fontWeight:700,color:"white",marginTop:".5rem"}}>Pertanyaan Umum</h1>
+      </div>
+      <div style={{maxWidth:860,margin:"0 auto",padding:"3rem 5%"}}>
+        <div style={{background:"#F0FBF4",borderRadius:16,padding:"1.5rem 2rem",
+          marginBottom:"2.5rem",border:"1px solid #A7F3D0"}}>
+          <p style={{color:"#444",lineHeight:1.8,fontSize:".93rem"}}>
+            <strong style={{color:T.green}}>Open Trip</strong> adalah Trip Gabungan—solusi bagi pecinta Traveling dimana tidak ada batas minimum peserta. 1 Peserta dapat bergabung dengan ketentuan yang berlaku.
+          </p>
+        </div>
+        {faqList.map((item,i)=>(
+          <div key={i} style={{border:"1px solid #E8EFF9",borderRadius:14,
+            marginBottom:".7rem",overflow:"hidden",boxShadow:"0 1px 6px rgba(0,0,0,.04)"}}>
+            <div onClick={()=>setOpen(open===i?null:i)}
+              style={{padding:"1rem 1.5rem",display:"flex",justifyContent:"space-between",
+                alignItems:"center",cursor:"pointer",
+                background:open===i?"#EFF6FF":"white",
+                fontWeight:700,fontSize:".9rem",color:"#081828"}}>
+              <span>{i+1}. {item.question||item.q}</span>
+              <span style={{color:T.blue,fontSize:"1.2rem",
+                transform:open===i?"rotate(180deg)":"none",transition:"transform .2s"}}>⌄</span>
+            </div>
+            {open===i && (
+              <div style={{padding:".8rem 1.5rem 1.2rem",background:"white",
+                color:"#555",fontSize:".88rem",lineHeight:1.8,
+                borderTop:"1px solid #E8EFF9",whiteSpace:"pre-line"}}>
+                {item.answer||item.a}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ABOUT / PORTOFOLIO
+   ============================================================ */
+function AboutPage({ go }) {
+  return (
+    <div style={{paddingTop:70}}>
+      <div style={{background:`linear-gradient(135deg,${T.bg},#0A2218)`,
+        padding:"4rem 5%",textAlign:"center"}}>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"3rem",fontWeight:700,color:"white"}}>About Us</h1>
+      </div>
+      <div style={{maxWidth:1000,margin:"0 auto",padding:"4rem 5%"}}>
+        <div className="dm-about-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4rem",
+          alignItems:"center",marginBottom:"4rem"}}>
+          <img src="https://images.unsplash.com/photo-1508672019048-805c876b67e2?w=700"
+            alt="About" style={{width:"100%",borderRadius:22,boxShadow:"0 12px 40px rgba(0,0,0,.15)"}}/>
+          <div>
+            <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
+              fontSize:"2.5rem",color:"#081828",marginBottom:"1.2rem",lineHeight:1.1}}>Dearmatrip</h2>
+            <p style={{color:"#555",lineHeight:1.85,marginBottom:"1rem"}}>
+              <strong>Dearmatrip</strong> merupakan tour operator yang berfokus pada tiga provinsi di Sumatera: Sumatera Utara, Aceh, dan Sumatera Barat.
+            </p>
+            <p style={{color:"#555",lineHeight:1.85,marginBottom:"1.5rem"}}>
+              Kami menyediakan paket open trip, private trip &amp; company trip. Berpengalaman <strong>6+ tahun</strong> melayani ribuan wisatawan.
+            </p>
+            <a href={`https://wa.me/${CFG.WA_NUM}`} target="_blank"
+              style={{background:"linear-gradient(135deg,#25D366,#128C7E)",color:"white",
+                padding:".85rem 2rem",borderRadius:50,textDecoration:"none",
+                fontWeight:800,fontSize:".95rem",display:"inline-block"}}>
+              Hubungi Kami
+            </a>
+          </div>
+        </div>
+        <div className="dm-dest-grid" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"1.5rem"}}>
+          {[["6+","Tahun"],["8+","Destinasi"],["5000+","Wisatawan"],["4.9★","Rating"]].map(([n,l])=>(
+            <div key={l} style={{background:"#F8FAFF",border:"1px solid #E8EFF9",
+              borderRadius:18,padding:"1.8rem",textAlign:"center"}}>
+              <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2.6rem",
+                fontWeight:700,color:T.blue}}>{n}</div>
+              <div style={{fontSize:".8rem",color:T.gray,marginTop:6}}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* helper: convert any YouTube URL → embed URL with autoplay */
+function ytEmbed(url, autoplay=false) {
+  if(!url) return "";
+  let id = "";
+  try {
+    const u = new URL(url);
+    if(u.hostname.includes("youtu.be")) id = u.pathname.slice(1);
+    else id = u.searchParams.get("v") || "";
+  } catch { id = url; }
+  return `https://www.youtube.com/embed/${id}?rel=0${autoplay?"&autoplay=1":""}`;
+}
+
+/* ── LIGHTBOX ─────────────────────────────────────────── */
+function Lightbox({ items, startIndex, type, onClose }) {
+  const [idx, setIdx] = useState(startIndex);
+  const total = items.filter(Boolean).length;
+  const activeItems = items.filter(Boolean);
+
+  const prev = () => setIdx(i => (i - 1 + total) % total);
+  const next = () => setIdx(i => (i + 1) % total);
+
+  /* keyboard navigation */
+  useEffect(() => {
+    const onKey = e => {
+      if (e.key === "ArrowLeft")  prev();
+      if (e.key === "ArrowRight") next();
+      if (e.key === "Escape")     onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  const url = activeItems[idx];
+
+  const BtnNav = ({ dir, onClick }) => (
+    <button onClick={onClick}
+      style={{
+        position:"absolute", top:"50%", transform:"translateY(-50%)",
+        [dir==="prev"?"left":"right"]: 20,
+        background:"rgba(255,255,255,.12)", backdropFilter:"blur(10px)",
+        border:"1px solid rgba(255,255,255,.2)", color:"white",
+        width:52, height:52, borderRadius:"50%", cursor:"pointer",
+        fontSize:"1.5rem", display:"flex", alignItems:"center", justifyContent:"center",
+        transition:"background .2s, transform .2s", zIndex:10,
+      }}
+      onMouseEnter={e=>{ e.currentTarget.style.background="rgba(255,255,255,.25)"; e.currentTarget.style.transform="translateY(-50%) scale(1.1)"; }}
+      onMouseLeave={e=>{ e.currentTarget.style.background="rgba(255,255,255,.12)"; e.currentTarget.style.transform="translateY(-50%) scale(1)"; }}>
+      {dir==="prev" ? "‹" : "›"}
+    </button>
+  );
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position:"fixed", inset:0, zIndex:9999,
+        background:"rgba(5,10,18,.96)", backdropFilter:"blur(18px)",
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+        animation:"lbIn .2s ease",
+      }}>
+      <style>{`@keyframes lbIn{from{opacity:0}to{opacity:1}}`}</style>
+
+      {/* close */}
+      <button onClick={onClose}
+        style={{
+          position:"fixed", top:20, right:24, background:"rgba(255,255,255,.1)",
+          border:"1px solid rgba(255,255,255,.18)", color:"white",
+          width:44, height:44, borderRadius:"50%", cursor:"pointer",
+          fontSize:"1.3rem", display:"flex", alignItems:"center", justifyContent:"center",
+          backdropFilter:"blur(10px)", transition:"background .2s",
+        }}
+        onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.22)"}
+        onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,.1)"}>
+        ✕
+      </button>
+
+      {/* counter */}
+      <div style={{
+        position:"fixed", top:24, left:"50%", transform:"translateX(-50%)",
+        background:"rgba(255,255,255,.08)", backdropFilter:"blur(10px)",
+        border:"1px solid rgba(255,255,255,.12)", color:"rgba(255,255,255,.75)",
+        padding:"5px 18px", borderRadius:50, fontSize:".82rem", fontWeight:700,
+        letterSpacing:".06em",
+      }}>
+        {idx+1} / {total}
+      </div>
+
+      {/* main content */}
+      <div onClick={e=>e.stopPropagation()}
+        style={{
+          maxWidth:"90vw", maxHeight:"82vh", display:"flex",
+          alignItems:"center", justifyContent:"center", position:"relative",
+        }}>
+        {type==="photo" ? (
+          <img
+            key={url}
+            src={url} alt=""
+            style={{
+              maxWidth:"88vw", maxHeight:"80vh",
+              objectFit:"contain", borderRadius:14,
+              boxShadow:"0 30px 80px rgba(0,0,0,.6)",
+              animation:"lbIn .25s ease",
+            }}
+          />
+        ) : (
+          <div key={url} style={{
+            width:"min(860px, 88vw)", aspectRatio:"16/9",
+            borderRadius:14, overflow:"hidden",
+            boxShadow:"0 30px 80px rgba(0,0,0,.6)",
+            animation:"lbIn .25s ease",
+          }}>
+            <iframe
+              src={ytEmbed(url, true)}
+              width="100%" height="100%"
+              style={{border:0, display:"block"}}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={`video-${idx}`}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* prev / next */}
+      {total > 1 && <>
+        <BtnNav dir="prev" onClick={e=>{e.stopPropagation();prev();}}/>
+        <BtnNav dir="next" onClick={e=>{e.stopPropagation();next();}}/>
+      </>}
+
+      {/* thumbnail strip */}
+      {total > 1 && (
+        <div style={{
+          position:"fixed", bottom:16, left:"50%", transform:"translateX(-50%)",
+          display:"flex", gap:8, padding:"10px 16px",
+          background:"rgba(0,0,0,.5)", backdropFilter:"blur(10px)",
+          borderRadius:50, border:"1px solid rgba(255,255,255,.1)",
+          maxWidth:"90vw", overflowX:"auto",
+        }}
+          onClick={e=>e.stopPropagation()}>
+          {activeItems.map((item,i)=>(
+            <div key={i} onClick={()=>setIdx(i)}
+              style={{
+                width: type==="photo" ? 48 : 72,
+                height: 36,
+                borderRadius:8, overflow:"hidden", cursor:"pointer", flexShrink:0,
+                border: i===idx ? `2px solid ${T.teal}` : "2px solid transparent",
+                opacity: i===idx ? 1 : 0.5,
+                transition:"all .2s",
+              }}>
+              {type==="photo"
+                ? <img src={item} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                : <div style={{
+                    width:"100%",height:"100%",
+                    background: i===idx ? T.teal : "#333",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    color:"white",fontSize:"1rem",
+                  }}>▶</div>
+              }
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── PORTOFOLIO PAGE ──────────────────────────────────── */
+function PortofolioPage({ portoData }) {
+  const allPhotos = portoData?.photos || Array(12).fill("");
+  const allVideos = portoData?.videos || Array(6).fill("");
+  const photos = allPhotos.filter(Boolean);
+  const videos = allVideos.filter(Boolean);
+
+  const [lb, setLb] = useState(null); // {type:"photo"|"video", index}
+
+  /* map visible index back to activeItems index */
+  const openPhoto = i => { const active = allPhotos.filter(Boolean); setLb({type:"photo", index:i}); };
+  const openVideo = i => { setLb({type:"video", index:i}); };
+
+  return (
+    <div style={{paddingTop:78}}>
+      {/* Lightbox */}
+      {lb && (
+        <Lightbox
+          items={lb.type==="photo" ? allPhotos : allVideos}
+          startIndex={lb.index}
+          type={lb.type}
+          onClose={()=>setLb(null)}
+        />
+      )}
+
+      <div style={{background:`linear-gradient(135deg,${T.bg},#0A2218)`,padding:"4rem 5%",textAlign:"center"}}>
+        <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"3rem",fontWeight:700,color:"white"}}>Portofolio</h1>
+        <p style={{color:"rgba(255,255,255,.5)",marginTop:".5rem"}}>Galeri Foto &amp; Video Perjalanan Bersama Dearmatrip</p>
+      </div>
+
+      {/* ── FOTO GRID 3×4 ── */}
+      <div style={{padding:"4rem 5%",maxWidth:1200,margin:"0 auto"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"2rem"}}>
+          <div style={{height:3,width:40,background:T.blue,borderRadius:2}}/>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2rem",fontWeight:700,color:"#081828"}}>
+            Galeri Foto
+          </h2>
+          {photos.length>0 && (
+            <span style={{marginLeft:"auto",fontSize:".8rem",color:T.gray,fontWeight:600}}>
+              {photos.length} foto · klik untuk perbesar
+            </span>
+          )}
+        </div>
+        <div className="dm-porto-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"1.2rem"}}>
+          {allPhotos.map((url,i)=>{
+            const activeIdx = allPhotos.filter(Boolean).indexOf(url);
+            return (
+              <div key={i}
+                onClick={()=>url && openPhoto(activeIdx)}
+                style={{
+                  aspectRatio:"4/3", borderRadius:16, overflow:"hidden",
+                  background:"#F0F4FA", position:"relative",
+                  boxShadow: url?"0 4px 20px rgba(0,0,0,.1)":"none",
+                  border: url?"none":"2px dashed #CBD5E1",
+                  cursor: url?"pointer":"default",
+                  transition:"transform .3s, box-shadow .3s",
+                }}
+                onMouseEnter={e=>{ if(url){ e.currentTarget.style.transform="scale(1.03)"; e.currentTarget.style.boxShadow="0 12px 40px rgba(0,0,0,.2)"; }}}
+                onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow=url?"0 4px 20px rgba(0,0,0,.1)":"none"; }}>
+                {url ? (
+                  <>
+                    <img src={url} alt={`foto-${i+1}`}
+                      style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                    {/* hover overlay */}
+                    <div style={{
+                      position:"absolute",inset:0,
+                      background:"rgba(7,17,30,.45)",
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      opacity:0,transition:"opacity .25s",
+                    }}
+                      onMouseEnter={e=>e.currentTarget.style.opacity=1}
+                      onMouseLeave={e=>e.currentTarget.style.opacity=0}>
+                      <div style={{
+                        width:52,height:52,borderRadius:"50%",
+                        background:"rgba(255,255,255,.2)",backdropFilter:"blur(8px)",
+                        border:"2px solid rgba(255,255,255,.5)",
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        fontSize:"1.4rem",color:"white",
+                      }}>🔍</div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",
+                    height:"100%",color:"#aaa",flexDirection:"column",gap:6}}>
+                    <span style={{fontSize:"1.5rem"}}>📷</span>
+                    <span style={{fontSize:".72rem"}}>Foto {i+1}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── VIDEO GRID 3×2 ── */}
+      <div style={{padding:"0 5% 5rem",maxWidth:1200,margin:"0 auto"}}>
+        <div style={{display:"flex",alignItems:"center",gap:"1rem",marginBottom:"2rem"}}>
+          <div style={{height:3,width:40,background:T.teal,borderRadius:2}}/>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2rem",fontWeight:700,color:"#081828"}}>
+            Galeri Video
+          </h2>
+          {videos.length>0 && (
+            <span style={{marginLeft:"auto",fontSize:".8rem",color:T.gray,fontWeight:600}}>
+              {videos.length} video · klik untuk fullscreen
+            </span>
+          )}
+        </div>
+        <div className="dm-video-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"1.2rem"}}>
+          {allVideos.map((url,i)=>{
+            const activeIdx = allVideos.filter(Boolean).indexOf(url);
+            return (
+              <div key={i}
+                style={{
+                  aspectRatio:"16/9", borderRadius:16, overflow:"hidden",
+                  background:"#07111E", position:"relative",
+                  border: url?"none":"2px dashed #CBD5E1",
+                  cursor: url?"pointer":"default",
+                  boxShadow: url?"0 4px 20px rgba(0,0,0,.18)":"none",
+                  transition:"transform .3s, box-shadow .3s",
+                }}
+                onMouseEnter={e=>{ if(url){ e.currentTarget.style.transform="scale(1.03)"; e.currentTarget.style.boxShadow="0 12px 40px rgba(0,0,0,.35)"; }}}
+                onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow=url?"0 4px 20px rgba(0,0,0,.18)":"none"; }}>
+                {url ? (
+                  <>
+                    {/* thumbnail via YouTube */}
+                    <img
+                      src={`https://img.youtube.com/vi/${(()=>{try{const u=new URL(url);return u.hostname.includes("youtu.be")?u.pathname.slice(1):u.searchParams.get("v")||"";}catch{return url;}})()}/mqdefault.jpg`}
+                      alt={`video-${i+1}`}
+                      style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}
+                      onError={e=>{e.target.style.display="none";}}
+                    />
+                    {/* play button overlay */}
+                    <div
+                      onClick={()=>openVideo(activeIdx)}
+                      style={{
+                        position:"absolute",inset:0,
+                        background:"rgba(7,17,30,.45)",
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        transition:"background .25s",
+                      }}
+                      onMouseEnter={e=>e.currentTarget.style.background="rgba(7,17,30,.6)"}
+                      onMouseLeave={e=>e.currentTarget.style.background="rgba(7,17,30,.45)"}>
+                      <div style={{
+                        width:62,height:62,borderRadius:"50%",
+                        background:"rgba(255,255,255,.15)",backdropFilter:"blur(8px)",
+                        border:"2px solid rgba(255,255,255,.45)",
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        fontSize:"1.6rem",color:"white",paddingLeft:4,
+                        transition:"transform .2s, background .2s",
+                      }}
+                        onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.15)";e.currentTarget.style.background="rgba(0,188,212,.4)";}}
+                        onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.background="rgba(255,255,255,.15)";}}>
+                        ▶
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",
+                    height:"100%",color:"rgba(255,255,255,.2)",flexDirection:"column",gap:6}}>
+                    <span style={{fontSize:"1.8rem"}}>▶</span>
+                    <span style={{fontSize:".72rem"}}>Video {i+1}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ADMIN LOGIN
+   ============================================================ */
+function AdminLogin({ onLogin }) {
+  const [pass,setPass]=useState(""); const [err,setErr]=useState("");
+  const go=()=>pass===CFG.ADMIN_PASS?onLogin():setErr("Password salah!");
+  return (
+    <div style={{paddingTop:70,minHeight:"100vh",background:"#F0F4FA",
+      display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{background:"white",borderRadius:24,padding:"2.8rem",
+        width:400,boxShadow:"0 12px 40px rgba(0,0,0,.1)"}}>
+        <div style={{textAlign:"center",marginBottom:"2rem"}}>
+          <div style={{width:60,height:60,
+            background:`linear-gradient(135deg,${T.blue},${T.bltl})`,
+            borderRadius:18,display:"flex",alignItems:"center",
+            justifyContent:"center",margin:"0 auto 1rem",fontSize:"1.6rem"}}>⚙️</div>
+          <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
+            fontSize:"1.8rem",color:"#081828"}}>Admin Panel</h2>
+          <p style={{color:T.gray,fontSize:".88rem"}}>Masukkan password untuk lanjut</p>
+        </div>
+        <input type="password" value={pass} onChange={e=>setPass(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&go()}
+          placeholder="Password"
+          style={{width:"100%",padding:".85rem 1.1rem",
+            border:`1.5px solid ${err?T.red:"#E5E7EB"}`,
+            borderRadius:12,fontFamily:"inherit",fontSize:".95rem",
+            outline:"none",marginBottom:".8rem",boxSizing:"border-box"}}/>
+        {err && <p style={{color:T.red,fontSize:".82rem",marginBottom:".6rem"}}>{err}</p>}
+        <button onClick={go}
+          style={{width:"100%",background:`linear-gradient(135deg,${T.blue},${T.bltl})`,
+            color:"white",border:"none",padding:"1rem",borderRadius:12,
+            fontFamily:"inherit",fontWeight:800,fontSize:"1rem",cursor:"pointer"}}>
+          Masuk
+        </button>
+        <p style={{color:"#ccc",textAlign:"center",fontSize:".72rem",marginTop:"1rem"}}>
+          Demo password: dearmatrip2025
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ADMIN PANEL
+   ============================================================ */
+function AdminPanel({ trips, faqs, portoData, onSaveTrip, onDeleteTrip, onSaveFaqs, onSavePorto, onLogout, go }) {
+  const [view,setView]     = useState("trips");
+  const [editTrip,setEdit] = useState(null);
+  const [msg,setMsg]       = useState({text:"",ok:true});
+
+  const flash=(text,ok=true)=>{setMsg({text,ok});setTimeout(()=>setMsg({text:"",ok:true}),3500);};
+
+  const save = async trip => {
+    try { await onSaveTrip(trip); flash("✅ Trip berhasil disimpan!"); setView("trips"); setEdit(null); }
+    catch(e){ flash("❌ Gagal: "+e.message,false); }
+  };
+  const del = async id => {
+    if(!window.confirm("Hapus trip ini?")) return;
+    try { await onDeleteTrip(id); flash("🗑 Trip dihapus."); }
+    catch(e){ flash("❌ Gagal: "+e.message,false); }
+  };
+  const saveFaqs = async list => {
+    try { await onSaveFaqs(list); flash("✅ FAQ disimpan!"); }
+    catch(e){ flash("❌ Gagal: "+e.message,false); }
+  };
+  const savePorto = async data => {
+    try { await onSavePorto(data); flash("✅ Portofolio disimpan!"); }
+    catch(e){ flash("❌ Gagal: "+e.message,false); }
+  };
+
+  return (
+    <div style={{paddingTop:70,minHeight:"100vh",background:"#F3F4F6"}}>
+      {/* top bar */}
+      <div style={{background:"white",borderBottom:"1px solid #E5E7EB",
+        padding:"1rem 5%",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <span style={{fontWeight:800,color:"#081828",fontSize:"1.1rem"}}>⚙️ Admin Panel — Dearmatrip</span>
+        <div style={{display:"flex",gap:".6rem"}}>
+          <button onClick={()=>go("home")}
+            style={{padding:".5rem 1rem",border:`1.5px solid ${T.blue}`,borderRadius:8,
+              background:"white",color:T.blue,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".85rem"}}>
+            ← Website
+          </button>
+          <button onClick={onLogout}
+            style={{padding:".5rem 1rem",border:"none",borderRadius:8,
+              background:T.red,color:"white",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".85rem"}}>
+            Logout
+          </button>
+        </div>
+      </div>
+
+      {msg.text && (
+        <div style={{background:msg.ok?"#D1FAE5":"#FEE2E2",
+          color:msg.ok?"#065F46":"#991B1B",
+          padding:".75rem 5%",textAlign:"center",fontWeight:700,fontSize:".9rem"}}>
+          {msg.text}
+        </div>
+      )}
+
+      <div style={{maxWidth:1200,margin:"0 auto",padding:"2rem 5%"}}>
+        {/* nav tabs */}
+        <div style={{display:"flex",gap:".5rem",marginBottom:"1.5rem",flexWrap:"wrap"}}>
+          {[["trips","📋 Trip"],["porto","🖼 Portofolio"],["faq","❓ FAQ Global"]].map(([v,l])=>(
+            <button key={v} onClick={()=>{setView(v);setEdit(null);}}
+              style={{padding:".6rem 1.4rem",border:"none",borderRadius:10,cursor:"pointer",
+                fontFamily:"inherit",fontWeight:700,fontSize:".88rem",
+                background:view===v?T.blue:"white",color:view===v?"white":T.gray,
+                boxShadow:view===v?"0 4px 14px rgba(26,110,219,.3)":"0 1px 4px rgba(0,0,0,.08)"}}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {view==="trips"&&!editTrip && <AdminTripsTable trips={trips} onEdit={t=>{setEdit(t);setView("edit");}} onDelete={del} onNew={()=>{setEdit(emptyTrip());setView("edit");}}/>}
+        {view==="edit"&&editTrip   && <AdminTripForm trip={editTrip} onSave={save} onCancel={()=>{setView("trips");setEdit(null);}}/>}
+        {view==="porto"            && <AdminPortoEditor portoData={portoData} onSave={savePorto}/>}
+        {view==="faq"              && <AdminFaqEditor faqList={faqs} onSave={saveFaqs}/>}
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────── */
+function AdminTripsTable({ trips, onEdit, onDelete, onNew }) {
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.2rem"}}>
+        <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,fontSize:"1.5rem",color:"#081828"}}>
+          Daftar Trip ({trips.length})
+        </h2>
+        <button onClick={onNew}
+          style={{background:`linear-gradient(135deg,${T.green},${T.glt})`,color:"white",
+            border:"none",padding:".65rem 1.5rem",borderRadius:10,cursor:"pointer",
+            fontFamily:"inherit",fontWeight:800,fontSize:".9rem"}}>
+          + Tambah Trip Baru
+        </button>
+      </div>
+      <div style={{background:"white",borderRadius:16,boxShadow:"0 2px 14px rgba(0,0,0,.07)",overflow:"hidden"}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead>
+            <tr style={{background:"#F8FAFF",borderBottom:"1px solid #E8EFF9"}}>
+              {["Foto","Nama Trip","Destinasi","Tipe","Mulai","Durasi","Aksi"].map(h=>(
+                <th key={h} style={{padding:".8rem 1rem",textAlign:"left",fontWeight:700,fontSize:".82rem",color:"#374151"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {trips.length===0
+              ? <tr><td colSpan={7} style={{padding:"2.5rem",textAlign:"center",color:T.gray}}>Belum ada trip.</td></tr>
+              : trips.map(t=>(
+                <tr key={t.id} style={{borderBottom:"1px solid #F0F4FC"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="#FAFCFF"}
+                  onMouseLeave={e=>e.currentTarget.style.background="white"}>
+                  <td style={{padding:".7rem 1rem"}}>
+                    {t.hero_image
+                      ? <img src={t.hero_image} alt="" style={{width:48,height:36,objectFit:"cover",borderRadius:8}}/>
+                      : <div style={{width:48,height:36,background:"#E8EFF9",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",color:"#aaa",fontSize:".65rem"}}>No img</div>
+                    }
+                  </td>
+                  <td style={{padding:".7rem 1rem",fontSize:".88rem",fontWeight:600,color:"#081828",maxWidth:200}}>{t.name}</td>
+                  <td style={{padding:".7rem 1rem",fontSize:".84rem",color:"#555"}}>{destOf(t.destination)?.name||t.destination}</td>
+                  <td style={{padding:".7rem 1rem"}}>
+                    <span style={{background:t.type==="open"?"#DBEAFE":"#EDE9FE",
+                      color:t.type==="open"?T.blue:"#7C3AED",
+                      padding:"3px 10px",borderRadius:50,fontSize:".74rem",fontWeight:700}}>
+                      {t.type==="open"?"Open":"Private"}
+                    </span>
+                  </td>
+                  <td style={{padding:".7rem 1rem",fontSize:".85rem",fontWeight:700,color:T.blue}}>{fmt(minPrice(t))}</td>
+                  <td style={{padding:".7rem 1rem",fontSize:".84rem",color:"#555"}}>{t.duration}</td>
+                  <td style={{padding:".7rem 1rem"}}>
+                    <div style={{display:"flex",gap:".4rem"}}>
+                      <button onClick={()=>onEdit(t)}
+                        style={{padding:".4rem .8rem",border:`1px solid ${T.blue}`,borderRadius:7,
+                          background:"white",color:T.blue,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".78rem"}}>
+                        ✏ Edit
+                      </button>
+                      <button onClick={()=>onDelete(t.id)}
+                        style={{padding:".4rem .8rem",border:`1px solid ${T.red}`,borderRadius:7,
+                          background:"white",color:T.red,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".78rem"}}>
+                        🗑
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ADMIN TRIP FORM
+   ============================================================ */
+function AdminTripForm({ trip: init, onSave, onCancel }) {
+  const DRAFT_KEY = `dm_draft_${init.id||"new"}`;
+
+  // Load from draft first, then init
+  const [t,setT] = useState(()=>{
+    try {
+      const saved = sessionStorage.getItem(DRAFT_KEY);
+      if(saved) return JSON.parse(saved);
+    } catch {}
+    return JSON.parse(JSON.stringify(init));
+  });
+
+  // Autosave draft on every change
+  useEffect(()=>{
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(t)); } catch {}
+  },[t]);
+
+  const upd = (k,v) => setT(p=>({...p,[k]:v}));
+
+  const handleSave = async () => {
+    await onSave(t);
+    sessionStorage.removeItem(DRAFT_KEY); // clear draft after save
+  };
+
+  const handleCancel = () => {
+    if(window.confirm("Batal edit? Draft akan dihapus.")) {
+      sessionStorage.removeItem(DRAFT_KEY);
+      onCancel();
+    }
+  };
+
+  const [hasDraft] = useState(()=>!!sessionStorage.getItem(DRAFT_KEY) && sessionStorage.getItem(DRAFT_KEY) !== JSON.stringify(init));
+
+  const S = {
+    lbl:  {fontWeight:700,fontSize:".82rem",color:"#374151",display:"block",marginBottom:4},
+    inp:  {width:"100%",padding:".72rem .9rem",border:"1.5px solid #E5E7EB",borderRadius:10,
+           fontFamily:"inherit",fontSize:".9rem",outline:"none",boxSizing:"border-box"},
+    sec:  {background:"white",borderRadius:16,padding:"1.5rem",marginBottom:"1.2rem",border:"1px solid #E8EFF9"},
+    stit: {fontWeight:800,color:"#081828",marginBottom:"1rem",fontSize:"1rem"},
+  };
+
+  /* pax pricing */
+  const addPax    = ()=>upd("pax_pricing",[...(t.pax_pricing||[]),{pax:2,label:"2 Pax",price:0}]);
+  const remPax    = i =>upd("pax_pricing",t.pax_pricing.filter((_,x)=>x!==i));
+  const updPax    = (i,k,v)=>{const a=[...t.pax_pricing];a[i]={...a[i],[k]:["price","pax"].includes(k)?parseInt(v)||0:v};upd("pax_pricing",a);};
+
+  /* gallery */
+  const addGal    = ()=>upd("gallery",[...(t.gallery||[]),""]);
+  const remGal    = i =>upd("gallery",t.gallery.filter((_,x)=>x!==i));
+  const updGal    = (i,v)=>{const g=[...t.gallery];g[i]=v;upd("gallery",g);};
+
+  /* itinerary */
+  const addDay    = ()=>upd("itinerary",[...(t.itinerary||[]),{day:(t.itinerary||[]).length+1,title:`Day ${(t.itinerary||[]).length+1}`,rows:[["",""]]}]);
+  const remDay    = di=>upd("itinerary",t.itinerary.filter((_,i)=>i!==di));
+  const addRow    = di=>{const it=[...t.itinerary];it[di]={...it[di],rows:[...it[di].rows,["",""]]};upd("itinerary",it);};
+  const remRow    = (di,ri)=>{const it=[...t.itinerary];it[di]={...it[di],rows:it[di].rows.filter((_,i)=>i!==ri)};upd("itinerary",it);};
+  const updRow    = (di,ri,col,v)=>{const it=JSON.parse(JSON.stringify(t.itinerary));it[di].rows[ri][col]=v;upd("itinerary",it);};
+  const updDayT   = (di,v)=>{const it=[...t.itinerary];it[di]={...it[di],title:v};upd("itinerary",it);};
+
+  /* list fields */
+  const lf = k => ({
+    items: t[k]||[],
+    add:   ()=>upd(k,[...(t[k]||[]),""]),
+    rem:   i =>upd(k,(t[k]||[]).filter((_,x)=>x!==i)),
+    upd:   (i,v)=>{const a=[...(t[k]||[])];a[i]=v;upd(k,a);},
+  });
+
+  /* faq */
+  const addFaq = ()=>upd("faq",[...(t.faq||[]),{q:"",a:""}]);
+  const remFaq = i =>upd("faq",t.faq.filter((_,x)=>x!==i));
+  const updFaq = (i,k,v)=>{const f=[...t.faq];f[i]={...f[i],[k]:v};upd("faq",f);};
+
+  /* jadwal */
+  const updJadwal = (m,v)=>upd("jadwal",{...(t.jadwal||{}),[m]:v.split("\n").filter(Boolean)});
+
+  return (
+    <div>
+      {hasDraft && (
+        <div style={{background:"#FFF9EC",border:"1px solid #FDE68A",borderRadius:12,
+          padding:".65rem 1rem",marginBottom:"1rem",fontSize:".83rem",color:"#92400E",
+          display:"flex",alignItems:"center",gap:8}}>
+          💾 <strong>Draft tersimpan otomatis</strong> — data Anda aman meski refresh.
+        </div>
+      )}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem",flexWrap:"wrap",gap:".5rem"}}>
+        <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,fontSize:"1.5rem",color:"#081828"}}>
+          {init.name?"Edit Trip":"Tambah Trip Baru"}
+        </h2>
+        <div style={{display:"flex",gap:".5rem"}}>
+          <button onClick={handleCancel}
+            style={{padding:".65rem 1.2rem",border:"1px solid #E5E7EB",borderRadius:10,
+              background:"white",color:T.gray,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>Batal</button>
+          <button onClick={handleSave}
+            style={{padding:".65rem 1.5rem",border:"none",borderRadius:10,
+              background:`linear-gradient(135deg,${T.blue},${T.bltl})`,color:"white",
+              cursor:"pointer",fontFamily:"inherit",fontWeight:800}}>💾 Simpan</button>
+        </div>
+      </div>
+
+      {/* ─ BASIC ─ */}
+      <div style={S.sec}>
+        <h3 style={S.stit}>📋 Informasi Dasar</h3>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:"1rem"}}>
+          <div><label style={S.lbl}>Nama Trip *</label>
+            <input style={S.inp} value={t.name} onChange={e=>upd("name",e.target.value)} placeholder="Open Trip Danau Toba 2D1N"/></div>
+          <div><label style={S.lbl}>Destinasi *</label>
+            <select style={S.inp} value={t.destination} onChange={e=>upd("destination",e.target.value)}>
+              {DEST_LIST.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
+            </select></div>
+          <div><label style={S.lbl}>Tipe Trip *</label>
+            <select style={S.inp} value={t.type} onChange={e=>upd("type",e.target.value)}>
+              <option value="open">Open Trip</option>
+              <option value="private">Private Trip</option>
+            </select></div>
+          <div><label style={S.lbl}>Durasi</label>
+            <input style={S.inp} value={t.duration} onChange={e=>upd("duration",e.target.value)} placeholder="1 Hari / 2D1N"/></div>
+        </div>
+        <div><label style={S.lbl}>Deskripsi</label>
+          <textarea style={{...S.inp,minHeight:90,resize:"vertical"}}
+            value={t.description} onChange={e=>upd("description",e.target.value)}
+            placeholder="Deskripsi trip…"/></div>
+      </div>
+
+      {/* ─ PAX PRICING ─ */}
+      <div style={S.sec}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+          <h3 style={S.stit}>💰 Harga Per Pax</h3>
+          <button onClick={addPax}
+            style={{background:T.green,color:"white",border:"none",padding:".45rem 1rem",
+              borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".82rem"}}>
+            + Tambah Harga
+          </button>
+        </div>
+        <p style={{color:T.gray,fontSize:".8rem",marginBottom:"1rem"}}>
+          💡 Open Trip: isi "1 Pax" dengan harga per orang.&nbsp;
+          Private Trip: isi 2 Pax, 4 Pax, 6 Pax, dsb. dengan harga berbeda.
+        </p>
+        {(t.pax_pricing||[]).map((p,i)=>(
+          <div key={i} style={{background:"#F8FAFF",borderRadius:12,padding:"1rem",marginBottom:".8rem",border:"1px solid #E8EFF9"}}>
+            <div style={{display:"grid",gridTemplateColumns:"90px 1fr 1fr auto",gap:".6rem",alignItems:"end",marginBottom:".7rem"}}>
+              <div><label style={{...S.lbl,marginBottom:2}}>Jml Pax</label>
+                <input type="number" min="1" style={{...S.inp,padding:".5rem .6rem"}}
+                  value={p.pax} onChange={e=>updPax(i,"pax",e.target.value)}/></div>
+              <div><label style={{...S.lbl,marginBottom:2}}>Label</label>
+                <input style={{...S.inp,padding:".5rem .6rem"}} value={p.label}
+                  onChange={e=>updPax(i,"label",e.target.value)} placeholder="Min 2 Pax"/></div>
+              <div><label style={{...S.lbl,marginBottom:2}}>Harga / Orang (Rp)</label>
+                <input type="number" style={{...S.inp,padding:".5rem .6rem",fontWeight:700,color:T.blue}}
+                  value={p.price} onChange={e=>updPax(i,"price",e.target.value)} placeholder="350000"/></div>
+              <button onClick={()=>remPax(i)}
+                style={{background:"#FEE2E2",color:T.red,border:"none",
+                  width:34,height:34,borderRadius:8,cursor:"pointer",fontWeight:700,fontSize:"1rem",alignSelf:"end"}}>×</button>
+            </div>
+            {/* Pilihan Mobil */}
+            <div>
+              <label style={{...S.lbl,marginBottom:6}}>🚗 Pilih Jenis Mobil</label>
+              <div style={{display:"flex",gap:".6rem",flexWrap:"wrap"}}>
+                {CARS.map(car=>{
+                  const sel = p.car===car.id;
+                  return (
+                    <div key={car.id} onClick={()=>updPax(i,"car",sel?null:car.id)}
+                      style={{
+                        display:"flex",alignItems:"center",gap:8,
+                        padding:".5rem .9rem",borderRadius:10,cursor:"pointer",
+                        border:sel?`2px solid ${T.blue}`:"2px solid #E5E7EB",
+                        background:sel?"#EFF6FF":"white",transition:"all .2s",
+                      }}>
+                      <img src={car.img} alt={car.name}
+                        style={{width:52,height:32,objectFit:"contain"}}/>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:".78rem",color:sel?T.blue:"#333"}}>{car.name}</div>
+                        <div style={{fontSize:".68rem",color:"#9ca3af"}}>{car.seats} seats</div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div onClick={()=>updPax(i,"car",null)}
+                  style={{
+                    display:"flex",alignItems:"center",gap:6,
+                    padding:".5rem .9rem",borderRadius:10,cursor:"pointer",
+                    border:!p.car?"2px solid #E5E7EB":"2px solid #E5E7EB",
+                    background:!p.car?"#F8FAFF":"white",transition:"all .2s",
+                  }}>
+                  <span style={{fontSize:".78rem",color:"#9ca3af"}}>— Tidak ada</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ─ FOTO ─ */}
+      <div style={S.sec}>
+        <h3 style={S.stit}>🖼 Foto (Upload ke Cloudinary)</h3>
+        <div style={{marginBottom:"1.5rem"}}>
+          <label style={S.lbl}>Foto Hero (Utama)</label>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:".8rem",alignItems:"start"}}>
+            <input style={S.inp} value={t.hero_image}
+              onChange={e=>upd("hero_image",e.target.value)} placeholder="URL atau upload ↗"/>
+            <ImgUpload label="☁ Upload" onDone={url=>upd("hero_image",url)} small preview={t.hero_image}/>
+          </div>
+          {t.hero_image && !t.hero_image.startsWith("data:") &&
+            <img src={t.hero_image} alt="" style={{marginTop:8,height:90,objectFit:"cover",borderRadius:10,display:"block"}}/>}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:".8rem"}}>
+          <label style={S.lbl}>Galeri Foto</label>
+          <button onClick={addGal}
+            style={{background:"#EFF6FF",color:T.blue,border:"none",padding:".38rem .9rem",
+              borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".8rem"}}>
+            + Tambah
+          </button>
+        </div>
+        {(t.gallery||[]).map((url,i)=>(
+          <div key={i} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",
+            gap:".5rem",alignItems:"center",marginBottom:".5rem"}}>
+            <input style={{...S.inp,padding:".55rem .8rem"}} value={url}
+              onChange={e=>updGal(i,e.target.value)} placeholder="URL gambar…"/>
+            <ImgUpload label="☁" onDone={u=>updGal(i,u)} small/>
+            {url&&<img src={url} alt="" style={{width:50,height:38,objectFit:"cover",borderRadius:6}}/>}
+            <button onClick={()=>remGal(i)}
+              style={{background:"#FEE2E2",color:T.red,border:"none",
+                padding:".4rem .6rem",borderRadius:7,cursor:"pointer",fontWeight:700}}>×</button>
+          </div>
+        ))}
+      </div>
+
+      {/* ─ ITINERARY ─ */}
+      <div style={S.sec}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+          <h3 style={S.stit}>📅 Itinerary</h3>
+          <button onClick={addDay}
+            style={{background:T.blue,color:"white",border:"none",padding:".45rem 1rem",
+              borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".82rem"}}>
+            + Tambah Hari
+          </button>
+        </div>
+        {(t.itinerary||[]).map((day,di)=>(
+          <div key={di} style={{border:"1px solid #E8EFF9",borderRadius:12,padding:"1rem",marginBottom:"1rem"}}>
+            <div style={{display:"flex",gap:".5rem",alignItems:"center",marginBottom:".8rem"}}>
+              <input style={{...S.inp,width:160,fontWeight:700}} value={day.title}
+                onChange={e=>updDayT(di,e.target.value)} placeholder="Day 1"/>
+              <button onClick={()=>remDay(di)}
+                style={{background:"#FEE2E2",color:T.red,border:"none",
+                  padding:".4rem .8rem",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".8rem"}}>
+                Hapus
+              </button>
+            </div>
+            <div style={{borderRadius:10,overflow:"hidden",marginBottom:".5rem",border:"1px solid #E8EFF9"}}>
+              <div style={{display:"flex",background:"#F8FAFF",borderBottom:"1px solid #E8EFF9"}}>
+                <div style={{width:165,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555",borderRight:"1px solid #E8EFF9"}}>Waktu</div>
+                <div style={{flex:1,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555"}}>Aktivitas</div>
+                <div style={{width:34}}/>
+              </div>
+              {day.rows.map((row,ri)=>(
+                <div key={ri} style={{display:"flex",borderBottom:ri<day.rows.length-1?"1px solid #E8EFF9":"none"}}>
+                  <div style={{width:165,borderRight:"1px solid #E8EFF9"}}>
+                    <input style={{...S.inp,border:"none",padding:".45rem .6rem",outline:"none"}}
+                      value={row[0]} onChange={e=>updRow(di,ri,0,e.target.value)} placeholder="07.00 – 08.00"/></div>
+                  <div style={{flex:1}}>
+                    <input style={{...S.inp,border:"none",padding:".45rem .6rem",outline:"none"}}
+                      value={row[1]} onChange={e=>updRow(di,ri,1,e.target.value)} placeholder="Aktivitas…"/></div>
+                  <button onClick={()=>remRow(di,ri)}
+                    style={{background:"none",border:"none",width:34,cursor:"pointer",color:"#ccc",fontWeight:900,fontSize:"1rem"}}
+                    onMouseEnter={e=>e.target.style.color=T.red}
+                    onMouseLeave={e=>e.target.style.color="#ccc"}>×</button>
+                </div>
+              ))}
+            </div>
+            <button onClick={()=>addRow(di)}
+              style={{background:"#EFF6FF",color:T.blue,border:"none",padding:".4rem .9rem",
+                borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".8rem"}}>
+              + Tambah Baris
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* ─ JADWAL (open trip only) ─ */}
+      {t.type==="open"
+        ? (
+          <div style={S.sec}>
+            <h3 style={S.stit}>🗓 Jadwal Open Trip (Per Bulan)</h3>
+            <p style={{color:T.gray,fontSize:".8rem",marginBottom:"1rem"}}>
+              Isi tanggal per baris, contoh: <code>04, 05</code>
+            </p>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:".8rem"}}>
+              {MONTHS_S.map(m=>(
+                <div key={m}>
+                  <label style={S.lbl}>{MONTHS_F[MONTHS_S.indexOf(m)]}</label>
+                  <textarea style={{...S.inp,minHeight:80,resize:"vertical",fontSize:".82rem"}}
+                    value={(t.jadwal?.[m]||[]).join("\n")}
+                    onChange={e=>updJadwal(m,e.target.value)}
+                    placeholder={"04, 05\n11, 12"}/>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{...S.sec,background:"#F9F5FF",border:"1px solid #DDD6FE",marginBottom:"1.2rem"}}>
+            <p style={{color:"#7C3AED",fontSize:".84rem"}}>
+              ℹ️ <strong>Private Trip</strong> tidak menampilkan jadwal tanggal. Jadwal ditentukan berdasarkan permintaan group.
+            </p>
+          </div>
+        )
+      }
+
+      {/* ─ INCLUDE / EXCLUDE / NOTES ─ */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:"1.2rem"}}>
+        <ListEd label="✅ Termasuk"      field={lf("termasuk")}         color={T.green}/>
+        <ListEd label="❌ Tidak Termasuk" field={lf("tidak_termasuk")}   color={T.red}/>
+      </div>
+      <div style={{marginBottom:"1.2rem"}}>
+        <ListEd label="⚠ Catatan Penting" field={lf("catatan")} color="#F59E0B"/>
+      </div>
+
+      {/* ─ FAQ ─ */}
+      <div style={S.sec}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1rem"}}>
+          <h3 style={S.stit}>❓ FAQ Trip</h3>
+          <button onClick={addFaq}
+            style={{background:T.blue,color:"white",border:"none",padding:".45rem 1rem",
+              borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".82rem"}}>
+            + Tambah FAQ
+          </button>
+        </div>
+        {(t.faq||[]).map((item,i)=>(
+          <div key={i} style={{border:"1px solid #E8EFF9",borderRadius:10,padding:".9rem",marginBottom:".6rem"}}>
+            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:".4rem"}}>
+              <button onClick={()=>remFaq(i)}
+                style={{background:"#FEE2E2",color:T.red,border:"none",
+                  padding:"2px 8px",borderRadius:6,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".78rem"}}>
+                × Hapus
+              </button>
+            </div>
+            <input style={{...S.inp,marginBottom:".5rem"}} value={item.q}
+              onChange={e=>updFaq(i,"q",e.target.value)} placeholder="Pertanyaan…"/>
+            <textarea style={{...S.inp,minHeight:60,resize:"vertical"}} value={item.a}
+              onChange={e=>updFaq(i,"a",e.target.value)} placeholder="Jawaban…"/>
+          </div>
+        ))}
+      </div>
+
+      {/* ─ LOKASI ─ */}
+      <div style={S.sec}>
+        <h3 style={S.stit}>📍 Lokasi</h3>
+        <div style={{marginBottom:".8rem"}}>
+          <label style={S.lbl}>Nama Lokasi</label>
+          <input style={S.inp} value={t.lokasi}
+            onChange={e=>upd("lokasi",e.target.value)} placeholder="Danau Toba, Sumatera Utara"/>
+        </div>
+        <label style={S.lbl}>Google Maps Embed URL</label>
+        <input style={S.inp} value={t.lokasi_embed}
+          onChange={e=>upd("lokasi_embed",e.target.value)}
+          placeholder="https://www.google.com/maps/embed?…"/>
+      </div>
+
+      <div style={{display:"flex",justifyContent:"flex-end",gap:".5rem",paddingBottom:"2rem"}}>
+        <button onClick={onCancel}
+          style={{padding:".75rem 1.8rem",border:"1px solid #E5E7EB",borderRadius:12,
+            background:"white",color:T.gray,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>Batal</button>
+        <button onClick={()=>onSave(t)}
+          style={{padding:".75rem 2rem",border:"none",borderRadius:12,
+            background:`linear-gradient(135deg,${T.blue},${T.bltl})`,color:"white",
+            cursor:"pointer",fontFamily:"inherit",fontWeight:800,fontSize:"1rem"}}>
+          💾 Simpan Trip
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ListEd({ label, field, color }) {
+  const S={inp:{width:"100%",padding:".6rem .8rem",border:"1.5px solid #E5E7EB",borderRadius:8,fontFamily:"inherit",fontSize:".85rem",outline:"none",boxSizing:"border-box"}};
+  return (
+    <div style={{background:"white",borderRadius:14,padding:"1.3rem",border:"1px solid #E8EFF9"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:".8rem"}}>
+        <h3 style={{fontWeight:800,color,fontSize:".95rem"}}>{label}</h3>
+        <button onClick={field.add}
+          style={{background:color,color:"white",border:"none",padding:".35rem .8rem",
+            borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".78rem"}}>+</button>
+      </div>
+      {field.items.map((item,i)=>(
+        <div key={i} style={{display:"flex",gap:".4rem",marginBottom:".5rem"}}>
+          <input style={S.inp} value={item} onChange={e=>field.upd(i,e.target.value)} placeholder="…"/>
+          <button onClick={()=>field.rem(i)}
+            style={{background:"#FEE2E2",color:T.red,border:"none",
+              width:32,height:32,borderRadius:7,cursor:"pointer",fontWeight:700,flexShrink:0}}>×</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ============================================================
+   ADMIN PORTOFOLIO EDITOR  — 12 foto + 6 video
+   ============================================================ */
+function AdminPortoEditor({ portoData, onSave }) {
+  const [photos, setPhotos] = useState(()=>(portoData?.photos || Array(12).fill("")));
+  const [videos, setVideos] = useState(()=>(portoData?.videos || Array(6).fill("")));
+
+  const updPhoto = (i,v) => { const a=[...photos]; a[i]=v; setPhotos(a); };
+  const updVideo = (i,v) => { const a=[...videos]; a[i]=v; setVideos(a); };
+
+  const S = {
+    sec:  {background:"white",borderRadius:16,padding:"1.5rem",marginBottom:"1.2rem",border:"1px solid #E8EFF9"},
+    inp:  {width:"100%",padding:".65rem .85rem",border:"1.5px solid #E5E7EB",borderRadius:10,
+           fontFamily:"inherit",fontSize:".87rem",outline:"none",boxSizing:"border-box"},
+    lbl:  {fontWeight:700,fontSize:".8rem",color:"#374151",display:"block",marginBottom:4},
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.5rem"}}>
+        <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,fontSize:"1.5rem",color:"#081828"}}>
+          🖼 Portofolio — Foto & Video
+        </h2>
+        <button onClick={()=>onSave({photos,videos})}
+          style={{padding:".65rem 1.5rem",border:"none",borderRadius:10,
+            background:`linear-gradient(135deg,${T.blue},${T.bltl})`,color:"white",
+            cursor:"pointer",fontFamily:"inherit",fontWeight:800}}>
+          💾 Simpan Semua
+        </button>
+      </div>
+
+      {/* ── 12 FOTO 3×4 ── */}
+      <div style={S.sec}>
+        <h3 style={{fontWeight:800,color:"#081828",marginBottom:".3rem",fontSize:"1rem"}}>📷 Galeri Foto (12 foto — 4 baris × 3 kolom)</h3>
+        <p style={{color:T.gray,fontSize:".8rem",marginBottom:"1.2rem"}}>Upload foto ke Cloudinary atau paste URL langsung.</p>
+        <div className="dm-admin-porto" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"1rem"}}>
+          {photos.map((url,i)=>(
+            <div key={i} style={{border:"1px solid #E8EFF9",borderRadius:12,padding:".8rem",background:"#FAFCFF"}}>
+              <label style={S.lbl}>Foto {i+1}</label>
+              <div style={{display:"flex",gap:".5rem",alignItems:"center",marginBottom:".5rem"}}>
+                <input style={{...S.inp,fontSize:".78rem"}} value={url}
+                  onChange={e=>updPhoto(i,e.target.value)} placeholder="URL foto…"/>
+                <ImgUpload label="☁" onDone={u=>updPhoto(i,u)} small/>
+              </div>
+              {url
+                ? <img src={url} alt="" style={{width:"100%",height:90,objectFit:"cover",borderRadius:8,display:"block"}}/>
+                : <div style={{width:"100%",height:90,background:"#F0F4FA",borderRadius:8,
+                    display:"flex",alignItems:"center",justifyContent:"center",color:"#ccc",fontSize:".75rem"}}>
+                    Preview kosong
+                  </div>
+              }
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 6 VIDEO 3×2 — upload langsung, max 30MB ── */}
+      <div style={S.sec}>
+        <h3 style={{fontWeight:800,color:"#081828",marginBottom:".3rem",fontSize:"1rem"}}>🎬 Galeri Video (6 video — 2 baris × 3 kolom)</h3>
+        <div style={{background:"#FFF9EC",border:"1px solid #FDE68A",borderRadius:10,
+          padding:".7rem 1rem",marginBottom:"1.2rem",fontSize:".82rem",color:"#92400E"}}>
+          ⚠️ Upload video langsung ke Cloudinary. <strong>Maksimal 30MB per video.</strong><br/>
+          Format: MP4, MOV, AVI. Pastikan UPLOAD_PRESET di Cloudinary mengizinkan file video.
+        </div>
+        <div className="dm-admin-porto" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"1rem"}}>
+          {videos.map((url,i)=>(
+            <div key={i} style={{border:"1px solid #E8EFF9",borderRadius:12,padding:".8rem",background:"#FAFCFF"}}>
+              <label style={S.lbl}>Video {i+1}</label>
+              <VideoUpload onDone={u=>updVideo(i,u)} preview={url} index={i}/>
+              {url && (
+                <button onClick={()=>updVideo(i,"")}
+                  style={{marginTop:6,width:"100%",background:"#FEE2E2",color:T.red,
+                    border:"none",padding:".35rem",borderRadius:7,cursor:"pointer",
+                    fontFamily:"inherit",fontWeight:700,fontSize:".76rem"}}>
+                  × Hapus Video
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{display:"flex",justifyContent:"flex-end",paddingBottom:"2rem"}}>
+        <button onClick={()=>onSave({photos,videos})}
+          style={{padding:".8rem 2rem",border:"none",borderRadius:12,
+            background:`linear-gradient(135deg,${T.blue},${T.bltl})`,color:"white",
+            cursor:"pointer",fontFamily:"inherit",fontWeight:800,fontSize:"1rem"}}>
+          💾 Simpan Portofolio
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AdminFaqEditor({ faqList, onSave }) {
+  const [faqs,setFaqs]=useState(()=>faqList.map((f,i)=>({...f,id:f.id||`f${i}`})));
+  const S={inp:{width:"100%",padding:".7rem .9rem",border:"1.5px solid #E5E7EB",borderRadius:10,fontFamily:"inherit",fontSize:".9rem",outline:"none",boxSizing:"border-box"}};
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"1.2rem"}}>
+        <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,fontSize:"1.5rem",color:"#081828"}}>FAQ Global</h2>
+        <div style={{display:"flex",gap:".5rem"}}>
+          <button onClick={()=>setFaqs(f=>[...f,{id:`f${Date.now()}`,question:"",answer:"",sort_order:f.length+1}])}
+            style={{background:T.blue,color:"white",border:"none",padding:".6rem 1.2rem",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
+            + Tambah
+          </button>
+          <button onClick={()=>onSave(faqs)}
+            style={{background:`linear-gradient(135deg,${T.green},${T.glt})`,color:"white",
+              border:"none",padding:".6rem 1.2rem",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontWeight:800}}>
+            💾 Simpan
+          </button>
+        </div>
+      </div>
+      {faqs.map((item,i)=>(
+        <div key={item.id} style={{background:"white",borderRadius:14,padding:"1.2rem",marginBottom:".8rem",border:"1px solid #E8EFF9"}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:".6rem"}}>
+            <span style={{fontWeight:700,color:T.gray,fontSize:".82rem"}}>FAQ #{i+1}</span>
+            <button onClick={()=>setFaqs(f=>f.filter((_,x)=>x!==i))}
+              style={{background:"#FEE2E2",color:T.red,border:"none",padding:"3px 10px",borderRadius:7,cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:".78rem"}}>
+              × Hapus
+            </button>
+          </div>
+          <input style={{...S.inp,marginBottom:".6rem"}} value={item.question}
+            onChange={e=>{const f=[...faqs];f[i]={...f[i],question:e.target.value};setFaqs(f);}}
+            placeholder="Pertanyaan…"/>
+          <textarea style={{...S.inp,minHeight:70,resize:"vertical"}} value={item.answer}
+            onChange={e=>{const f=[...faqs];f[i]={...f[i],answer:e.target.value};setFaqs(f);}}
+            placeholder="Jawaban…"/>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+function Footer({ go }) {
+  return (
+    <footer style={{background:"#050E18",color:"rgba(255,255,255,.6)",padding:"70px 5% 28px"}}>
+      <div style={{maxWidth:1200,margin:"0 auto"}}>
+        <div className="dm-footer-grid" style={{display:"grid",gridTemplateColumns:"1.6fr 1fr 1fr 1fr",gap:"3rem",marginBottom:"3rem"}}>
+          <div>
+            <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:900,fontSize:"1.3rem",
+              color:"white",letterSpacing:".08em",marginBottom:".3rem"}}>DEARMA</div>
+            <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:400,fontSize:".65rem",
+              color:T.teal,letterSpacing:".22em",marginBottom:"1rem"}}>JAYA TRANSPORT</div>
+            <p style={{fontSize:".84rem",lineHeight:1.8,color:"rgba(255,255,255,.42)",marginBottom:"1.2rem"}}>
+              Tour Operator terpercaya di Medan. Berpengalaman 6+ tahun melayani ribuan wisatawan.
+            </p>
+            <div style={{display:"flex",gap:".5rem"}}>
+              {["📸 IG","🎵 TikTok","👥 FB"].map(s=>(
+                <a key={s} href="https://instagram.com"
+                  style={{background:"rgba(255,255,255,.06)",color:"rgba(255,255,255,.55)",
+                    padding:"5px 10px",borderRadius:8,textDecoration:"none",
+                    fontSize:".76rem",fontWeight:700,border:"1px solid rgba(255,255,255,.07)"}}>{s}</a>
+              ))}
+            </div>
+          </div>
+          {[
+            ["Open Trip",["Danau Toba","Sabang – Banda Aceh","Combo Sumatera Utara","Sibolga","Bukit Lawang"]],
+            ["Private Trip",["Danau Toba","Sabang – Banda Aceh","Bukit Lawang","Sumatera Barat","Tangkahan"]],
+          ].map(([title,links])=>(
+            <div key={title}>
+              <h4 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,color:"white",
+                marginBottom:"1.2rem",fontSize:"1.05rem"}}>{title}</h4>
+              {links.map(l=>(
+                <div key={l} style={{marginBottom:".5rem"}}>
+                  <a href="/" style={{color:"rgba(255,255,255,.42)",textDecoration:"none",fontSize:".84rem"}}>{l}</a>
+                </div>
+              ))}
+            </div>
+          ))}
+          <div>
+            <h4 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,color:"white",
+              marginBottom:"1.2rem",fontSize:"1.05rem"}}>Kontak Kami</h4>
+            {[
+              ["📍","Jl. Pengabdian No. 103, Bandar Setia, Deli Serdang, Sumut 20371","#aaa"],
+              ["💬","+62 812-3456-7890","#25D366"],
+              ["✉️","admin@dearmatrip.com","#4DA3FF"],
+            ].map(([ico,v,color])=>(
+              <div key={v} style={{marginBottom:".7rem",fontSize:".84rem",display:"flex",gap:".6rem"}}>
+                <span>{ico}</span>
+                <span style={{color,lineHeight:1.6}}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:"1.5rem",
+          display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:"1rem",
+          fontSize:".8rem",color:"rgba(255,255,255,.25)"}}>
+          <span>© 2025 Dearmatrip · Dearma Jaya Transport. All rights reserved.</span>
+          <span style={{display:"flex",alignItems:"center",gap:10}}>
+            Made with ❤️ in Medan, Sumatera
+            {/* titik admin tersembunyi — klik 5x cepat */}
+            <span
+              title=""
+              onClick={()=>{
+                const now=Date.now();
+                const clicks=JSON.parse(sessionStorage.getItem("dm_fc")||"[]").filter(t=>now-t<2500);
+                clicks.push(now);
+                sessionStorage.setItem("dm_fc",JSON.stringify(clicks));
+                if(clicks.length>=5){sessionStorage.removeItem("dm_fc");go("admin");}
+              }}
+              style={{
+                display:"inline-block",width:10,height:10,borderRadius:"50%",
+                background:"rgba(255,255,255,.06)",cursor:"default",
+                userSelect:"none",flexShrink:0,
+              }}/>
+          </span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/* ============================================================
+   ROOT APP
+   ============================================================ */
+function App() {
+  const [page, setPage] = useState(()=>{
+    const p = sessionStorage.getItem("dm_page") || "home";
+    if (p === "admin" && sessionStorage.getItem("dm_admin") === "1") return "admin";
+    if (p === "admin") return "home";
+    return p;
+  });
+  const [params, setParams] = useState(()=>{
+    try { return JSON.parse(sessionStorage.getItem("dm_params") || "{}"); } catch { return {}; }
+  });
+  const [trips,    setTrips]    = useState([]);
+  const [faqs,     setFaqs]     = useState([]);
+  const [portoData,setPortoData]= useState({photos:Array(12).fill(""),videos:Array(6).fill("")});
+  const [loading,  setLoading]  = useState(true);
+  const [dbReady,  setDbReady]  = useState(false);
+  const [adminIn,  setAdminIn]  = useState(()=>sessionStorage.getItem("dm_admin")==="1");
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState(false);
+
+  // ── Admin auto-logout after 60s idle
+  const idleRef = useRef(null);
+  const resetIdle = useCallback(()=>{
+    clearTimeout(idleRef.current);
+    idleRef.current = setTimeout(()=>{
+      setAdminIn(false);
+      sessionStorage.removeItem("dm_admin");
+      sessionStorage.setItem("dm_page","home");
+      setPage("home");
+    }, 60000);
+  },[]);
+
+  useEffect(()=>{
+    if(!adminIn){ clearTimeout(idleRef.current); return; }
+    resetIdle();
+    const events=["mousemove","keydown","click","scroll","touchstart"];
+    events.forEach(e=>window.addEventListener(e,resetIdle));
+    return()=>{ clearTimeout(idleRef.current); events.forEach(e=>window.removeEventListener(e,resetIdle)); };
+  },[adminIn,resetIdle]);
+
+  // ── Scroll listener
+  useEffect(()=>{
+    const h=()=>setScrolled(window.scrollY>30);
+    window.addEventListener("scroll",h);
+    return()=>window.removeEventListener("scroll",h);
+  },[]);
+
+  // ── Load from Supabase
+  useEffect(()=>{
+    (async()=>{
+      try {
+        const [ts,fs,ps] = await Promise.all([
+          sb.select("trips","?order=sort_order.asc"),
+          sb.select("faqs","?order=sort_order.asc"),
+          sb.select("porto","?id=eq.main").catch(()=>[]),
+        ]);
+        setTrips(ts.length ? ts : DEFAULT_TRIPS);
+        setFaqs(fs.length  ? fs : DEFAULT_FAQ);
+        if(ps?.[0]) setPortoData(ps[0].data || portoData);
+        setDbReady(true);
+      } catch(e) {
+        console.warn("Supabase tidak terhubung — data lokal.", e.message);
+        setTrips(DEFAULT_TRIPS);
+        setFaqs(DEFAULT_FAQ);
+      }
+      setLoading(false);
+    })();
+  },[]);
+
+  // ── CRUD
+  const saveTrip = useCallback(async trip => {
+    if(dbReady){ const s=await sb.upsert("trips",trip); setTrips(prev=>{const i=prev.findIndex(t=>t.id===trip.id);return i>=0?prev.map(t=>t.id===trip.id?s[0]:t):[...prev,s[0]];}); }
+    else setTrips(prev=>{const i=prev.findIndex(t=>t.id===trip.id);return i>=0?prev.map(t=>t.id===trip.id?trip:t):[...prev,trip];});
+  },[dbReady]);
+
+  const deleteTrip = useCallback(async id=>{
+    if(dbReady) await sb.remove("trips",id);
+    setTrips(prev=>prev.filter(t=>t.id!==id));
+  },[dbReady]);
+
+  const saveFaqs = useCallback(async list=>{
+    if(dbReady) await Promise.all(list.map((f,i)=>sb.upsert("faqs",{...f,sort_order:i+1})));
+    setFaqs(list);
+  },[dbReady]);
+
+  const savePorto = useCallback(async data=>{
+    if(dbReady) await sb.upsert("porto",{id:"main",data});
+    setPortoData(data);
+  },[dbReady]);
+
+  function go(p, prm={}) {
+    sessionStorage.setItem("dm_page", p);
+    sessionStorage.setItem("dm_params", JSON.stringify(prm));
+    setPage(p); setParams(prm); setMobileMenu(false); window.scrollTo(0,0);
+  }
+
+  function adminLogin(){
+    setAdminIn(true);
+    sessionStorage.setItem("dm_admin","1");
+    resetIdle();
+  }
+  function adminLogout(){
+    setAdminIn(false);
+    sessionStorage.removeItem("dm_admin");
+    go("home");
+  }
+
+  if(loading) return (
+    <div style={{display:"flex",justifyContent:"center",alignItems:"center",
+      height:"100vh",background:T.bg,flexDirection:"column",gap:"1.2rem"}}>
+      <div style={{width:56,height:56,border:`3px solid rgba(0,188,212,.25)`,
+        borderTop:`3px solid ${T.teal}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+      <span style={{fontSize:".95rem",color:"rgba(255,255,255,.45)",
+        fontFamily:"'Cormorant Garamond',serif",letterSpacing:".12em"}}>DEARMATRIP</span>
+    </div>
+  );
+
+  // Find trip from params (re-hydrate after refresh)
+  const activeTripId = params?.trip?.id;
+  const activeTrip   = activeTripId ? trips.find(t=>t.id===activeTripId)||params.trip : params.trip;
+
+  return (
+    <div style={{fontFamily:"'DM Sans','Nunito',sans-serif",background:"white",minHeight:"100vh"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=DM+Sans:wght@300;400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0;}
+        html{scroll-behavior:smooth;}
+        body{overflow-x:hidden;}
+        @keyframes spin  { to{transform:rotate(360deg);} }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.35;} }
+        input:focus,textarea:focus,select:focus{
+          border-color:#1A6EDB!important;
+          box-shadow:0 0 0 3px rgba(26,110,219,.1);
+        }
+        ::-webkit-scrollbar{width:5px;height:5px;}
+        ::-webkit-scrollbar-track{background:#f1f1f1;}
+        ::-webkit-scrollbar-thumb{background:#c1c1c1;border-radius:3px;}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+        .dm-hamburger{display:none!important;}
+        .dm-nav-links{display:flex;}
+        @media(max-width:860px){
+          .dm-nav-links{display:none!important;}
+          .dm-hamburger{display:flex!important;}
+          .dm-hero-title{font-size:2.4rem!important;}
+          .dm-hero-sub{font-size:1rem!important;}
+          .dm-hero-btns{flex-direction:column!important;align-items:stretch!important;}
+          .dm-dest-grid{grid-template-columns:1fr 1fr!important;}
+          .dm-why-grid{grid-template-columns:1fr 1fr!important;}
+          .dm-trip-cards{grid-template-columns:1fr!important;}
+          .dm-detail-wrap{grid-template-columns:1fr!important;padding:1rem 4%!important;}
+          .dm-about-grid{grid-template-columns:1fr!important;}
+          .dm-about-img{display:none!important;}
+          .dm-stats-grid{grid-template-columns:1fr 1fr!important;}
+          .dm-porto-grid{grid-template-columns:1fr 1fr!important;}
+          .dm-video-grid{grid-template-columns:1fr 1fr!important;}
+          .dm-footer-grid{grid-template-columns:1fr 1fr!important;}
+          .dm-admin-tabs{flex-wrap:wrap!important;}
+          .dm-pax-grid{grid-template-columns:1fr 1fr auto!important;}
+          .dm-admin-porto{grid-template-columns:1fr 1fr!important;}
+        }
+        @media(max-width:520px){
+          .dm-hero-title{font-size:1.9rem!important;}
+          .dm-dest-grid{grid-template-columns:1fr!important;}
+          .dm-why-grid{grid-template-columns:1fr!important;}
+          .dm-porto-grid{grid-template-columns:1fr!important;}
+          .dm-video-grid{grid-template-columns:1fr!important;}
+          .dm-footer-grid{grid-template-columns:1fr!important;}
+          .dm-admin-porto{grid-template-columns:1fr!important;}
+          .dm-stats-grid{grid-template-columns:1fr 1fr!important;}
+        }
+      `}</style>
+
+      {/* ── MOBILE MENU OVERLAY ── */}
+      {mobileMenu && (
+        <div style={{position:"fixed",inset:0,zIndex:1000,background:"rgba(7,17,30,.98)",
+          display:"flex",flexDirection:"column",padding:"88px 6% 2rem",overflowY:"auto",
+          animation:"slideDown .22s ease"}}>
+          <button onClick={()=>setMobileMenu(false)}
+            style={{position:"absolute",top:20,right:20,background:"rgba(255,255,255,.1)",
+              border:"none",color:"white",width:40,height:40,borderRadius:"50%",
+              cursor:"pointer",fontSize:"1.3rem",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            ✕
+          </button>
+          {[["home","🏠 Beranda"],["portofolio","📸 Portofolio"],["about","👥 About"],["faq","❓ FAQ"]].map(([p,l])=>(
+            <div key={p} onClick={()=>go(p)}
+              style={{color:page===p?T.teal:"white",fontWeight:700,fontSize:"1.05rem",padding:".9rem 0",
+                borderBottom:"1px solid rgba(255,255,255,.08)",cursor:"pointer"}}>
+              {l}
+            </div>
+          ))}
+          <div style={{color:"rgba(255,255,255,.35)",fontWeight:800,fontSize:".68rem",
+            letterSpacing:".14em",textTransform:"uppercase",padding:"1.2rem 0 .4rem"}}>OPEN TRIP</div>
+          {DEST_LIST.filter(d=>trips.some(t=>t.destination===d.id&&t.type==="open")).map(d=>(
+            <div key={d.id} onClick={()=>go("destpage",{destId:d.id})}
+              style={{color:"rgba(255,255,255,.7)",fontSize:".95rem",padding:".6rem 0",
+                borderBottom:"1px solid rgba(255,255,255,.05)",cursor:"pointer",paddingLeft:".5rem"}}>
+              {d.name}
+            </div>
+          ))}
+          <div style={{color:"rgba(255,255,255,.35)",fontWeight:800,fontSize:".68rem",
+            letterSpacing:".14em",textTransform:"uppercase",padding:"1.2rem 0 .4rem"}}>PRIVATE TRIP</div>
+          {DEST_LIST.filter(d=>trips.some(t=>t.destination===d.id&&t.type==="private")).map(d=>(
+            <div key={d.id} onClick={()=>go("destpage",{destId:d.id})}
+              style={{color:"rgba(255,255,255,.7)",fontSize:".95rem",padding:".6rem 0",
+                borderBottom:"1px solid rgba(255,255,255,.05)",cursor:"pointer",paddingLeft:".5rem"}}>
+              {d.name}
+            </div>
+          ))}
+          <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip!`} target="_blank" rel="noopener noreferrer"
+            style={{marginTop:"1.5rem",background:"linear-gradient(135deg,#25D366,#128C7E)",
+              color:"white",padding:"1rem",borderRadius:14,textAlign:"center",
+              textDecoration:"none",fontWeight:800,fontSize:"1rem"}}>
+            💬 Chat WhatsApp
+          </a>
+        </div>
+      )}
+
+      {page!=="admin" && <Navbar go={go} trips={trips} page={page} scrolled={scrolled} onHamburger={()=>setMobileMenu(m=>!m)}/>}
+
+      {page==="home"       && <HomePage go={go} trips={trips}/>}
+      {page==="destpage"   && <DestPage destId={params.destId} trips={trips} go={go}/>}
+      {page==="detail"     && activeTrip && <TripDetailPage trip={activeTrip} go={go} allTrips={trips}/>}
+      {page==="faq"        && <FAQPage go={go} faqList={faqs}/>}
+      {page==="about"      && <AboutPage go={go}/>}
+      {page==="portofolio" && <PortofolioPage portoData={portoData} onSavePorto={savePorto}/>}
+      {page==="admin" && !adminIn && <AdminLogin onLogin={adminLogin}/>}
+      {page==="admin" &&  adminIn &&
+        <AdminPanel trips={trips} faqs={faqs} portoData={portoData}
+          onSaveTrip={saveTrip} onDeleteTrip={deleteTrip} onSaveFaqs={saveFaqs} onSavePorto={savePorto}
+          onLogout={adminLogout} go={go}/>}
+
+      {page!=="admin" && <Footer go={go}/>}
+
+      {/* WhatsApp FAB */}
+      {page!=="admin" && (
+        <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip!`} target="_blank" rel="noopener noreferrer"
+          style={{position:"fixed",bottom:28,right:28,zIndex:9999,width:58,height:58,
+            background:"#25D366",borderRadius:"50%",display:"flex",alignItems:"center",
+            justifyContent:"center",boxShadow:"0 6px 24px rgba(37,211,102,.5)",
+            textDecoration:"none",fontSize:"1.7rem",transition:"transform .25s,box-shadow .25s"}}
+          onMouseOver={e=>{e.currentTarget.style.transform="scale(1.15)";e.currentTarget.style.boxShadow="0 10px 36px rgba(37,211,102,.7)";}}
+          onMouseOut={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 6px 24px rgba(37,211,102,.5)";}}>
+          💬
+        </a>
+      )}
+
+      {/* Back to top */}
+      {scrolled && page!=="admin" && (
+        <button onClick={()=>window.scrollTo({top:0,behavior:"smooth"})}
+          style={{position:"fixed",bottom:100,right:28,zIndex:9999,width:42,height:42,
+            background:"rgba(7,17,30,.8)",color:"white",border:"1px solid rgba(255,255,255,.1)",
+            borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+            cursor:"pointer",fontSize:"1rem",backdropFilter:"blur(10px)"}}>↑</button>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+  </script>
+</body>
+</html>
