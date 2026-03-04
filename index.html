@@ -22,16 +22,16 @@ const { useState, useEffect, useRef, useCallback } = React;
    ============================================================ */
 const CFG = {
   // --- CLOUDINARY ---
-  CLOUD_NAME:    "dcmdyyicv",       // Settings → Account → Cloud name
+  CLOUD_NAME:    "your_cloud_name",       // Settings → Account → Cloud name
   UPLOAD_PRESET: "dearmatrip_unsigned",   // Settings → Upload → Add unsigned preset
 
   // --- SUPABASE ---
-  SUPABASE_URL:  "https://suytrozfwlzlamhateuh.supabase.co",
-  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1eXRyb3pmd2x6bGFtaGF0ZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2Mzg3NjIsImV4cCI6MjA4ODIxNDc2Mn0.JtQ_E5CObNs7G1EWuJ4l7DQUvRyrhfz778awRMRr1oo",
+  SUPABASE_URL:  "https://xxxx.supabase.co",
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
 
   // --- UMUM ---
   ADMIN_PASS: "dearmatrip2025",
-  WA_NUM:     "62818520057",
+  WA_NUM:     "6281234567890",
 };
 
 /* ============================================================
@@ -1384,7 +1384,13 @@ function AboutPage({ go }) {
   );
 }
 
-/* helper: convert any YouTube URL → embed URL with autoplay */
+/* helpers: detect URL type and build embed */
+function isCloudinaryVideo(url) {
+  return url && (url.includes("cloudinary.com") || url.includes("res.cloudinary.com"));
+}
+function isYoutube(url) {
+  return url && (url.includes("youtube.com") || url.includes("youtu.be"));
+}
 function ytEmbed(url, autoplay=false) {
   if(!url) return "";
   let id = "";
@@ -1394,6 +1400,21 @@ function ytEmbed(url, autoplay=false) {
     else id = u.searchParams.get("v") || "";
   } catch { id = url; }
   return `https://www.youtube.com/embed/${id}?rel=0${autoplay?"&autoplay=1":""}`;
+}
+function getVideoThumb(url) {
+  if(!url) return "";
+  if(isCloudinaryVideo(url)) {
+    // Convert Cloudinary video URL to thumbnail image
+    return url.replace("/video/upload/", "/video/upload/so_0/").replace(/\.(mp4|mov|avi|webm)$/i, ".jpg");
+  }
+  if(isYoutube(url)) {
+    try {
+      const u = new URL(url);
+      const id = u.hostname.includes("youtu.be") ? u.pathname.slice(1) : u.searchParams.get("v") || "";
+      return `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+    } catch { return ""; }
+  }
+  return "";
 }
 
 /* ── LIGHTBOX ─────────────────────────────────────────── */
@@ -1499,14 +1520,22 @@ function Lightbox({ items, startIndex, type, onClose }) {
             boxShadow:"0 30px 80px rgba(0,0,0,.6)",
             animation:"lbIn .25s ease",
           }}>
-            <iframe
-              src={ytEmbed(url, true)}
-              width="100%" height="100%"
-              style={{border:0, display:"block"}}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              title={`video-${idx}`}
-            />
+            {isCloudinaryVideo(url) ? (
+              <video
+                src={url} controls autoPlay
+                style={{width:"100%",height:"100%",display:"block",background:"#000"}}
+                controlsList="nodownload"
+              />
+            ) : (
+              <iframe
+                src={ytEmbed(url, true)}
+                width="100%" height="100%"
+                style={{border:0, display:"block"}}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title={`video-${idx}`}
+              />
+            )}
           </div>
         )}
       </div>
@@ -1539,12 +1568,15 @@ function Lightbox({ items, startIndex, type, onClose }) {
               }}>
               {type==="photo"
                 ? <img src={item} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                : <div style={{
-                    width:"100%",height:"100%",
-                    background: i===idx ? T.teal : "#333",
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                    color:"white",fontSize:"1rem",
-                  }}>▶</div>
+                : (getVideoThumb(item)
+                    ? <img src={getVideoThumb(item)} alt="" style={{width:"100%",height:"100%",objectFit:"cover",opacity: i===idx?1:0.6}}/>
+                    : <div style={{
+                        width:"100%",height:"100%",
+                        background: i===idx ? T.teal : "#333",
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        color:"white",fontSize:"1rem",
+                      }}>▶</div>
+                  )
               }
             </div>
           ))}
@@ -1678,13 +1710,22 @@ function PortofolioPage({ portoData }) {
                 onMouseLeave={e=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.boxShadow=url?"0 4px 20px rgba(0,0,0,.18)":"none"; }}>
                 {url ? (
                   <>
-                    {/* thumbnail via YouTube */}
-                    <img
-                      src={`https://img.youtube.com/vi/${(()=>{try{const u=new URL(url);return u.hostname.includes("youtu.be")?u.pathname.slice(1):u.searchParams.get("v")||"";}catch{return url;}})()}/mqdefault.jpg`}
-                      alt={`video-${i+1}`}
-                      style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}
-                      onError={e=>{e.target.style.display="none";}}
-                    />
+                    {/* thumbnail — Cloudinary atau YouTube */}
+                    {isCloudinaryVideo(url) ? (
+                      <video
+                        src={url}
+                        style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}
+                        preload="metadata"
+                        muted
+                      />
+                    ) : (
+                      <img
+                        src={getVideoThumb(url)}
+                        alt={`video-${i+1}`}
+                        style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}
+                        onError={e=>{e.target.style.display="none";}}
+                      />
+                    )}
                     {/* play button overlay */}
                     <div
                       onClick={()=>openVideo(activeIdx)}
