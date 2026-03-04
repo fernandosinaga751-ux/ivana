@@ -8,17 +8,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
    SUPABASE    → supabase.com  (daftar gratis)
    ============================================================ */
 const CFG = {
-  // --- CLOUDINARY ---
-  CLOUD_NAME:    "dcmdyyicv",       // Settings → Account → Cloud name
-  UPLOAD_PRESET: "dearmatrip_unsigned",   // Settings → Upload → Add unsigned preset
-
-  // --- SUPABASE ---
-  SUPABASE_URL:  "https://xvueednasqcttfcwonun.supabase.co",
-  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dWVlZG5hc3FjdHRmY3dvbnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDM3MzQsImV4cCI6MjA4ODE3OTczNH0.WbUZtx4cTaAS0cKmSZhy4e-ilOb7V4GEagFp1XWU4Ao",
-
-  // --- UMUM ---
+  CLOUD_NAME:    "dcmdyyicv",
+  UPLOAD_PRESET: "dearmatrip_unsigned",
+  SUPABASE_URL:  "https://xvueednasqcttfcwonun.supabase.co",   // ← GANTI INI
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dWVlZG5hc3FjdHRmY3dvbnVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MDM3MzQsImV4cCI6MjA4ODE3OTczNH0.WbUZtx4cTaAS0cKmSZhy4e-ilOb7V4GEagFp1XWU4Ao",                // ← GANTI INI
   ADMIN_PASS: "dearmatrip2025",
-  WA_NUM:     "6281262520057",
+  WA_NUM:     "62818520057",
 };
 
 
