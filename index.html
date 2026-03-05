@@ -22,16 +22,16 @@ const { useState, useEffect, useRef, useCallback } = React;
    ============================================================ */
 const CFG = {
   // --- CLOUDINARY ---
-  CLOUD_NAME:    "dcmdyyicv",       // Settings → Account → Cloud name
+  CLOUD_NAME:    "your_cloud_name",       // Settings → Account → Cloud name
   UPLOAD_PRESET: "dearmatrip_unsigned",   // Settings → Upload → Add unsigned preset
 
   // --- SUPABASE ---
-  SUPABASE_URL:  "https://suytrozfwlzlamhateuh.supabase.co",
-  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1eXRyb3pmd2x6bGFtaGF0ZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2Mzg3NjIsImV4cCI6MjA4ODIxNDc2Mn0.JtQ_E5CObNs7G1EWuJ4l7DQUvRyrhfz778awRMRr1oo",
+  SUPABASE_URL:  "https://xxxx.supabase.co",
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
 
   // --- UMUM ---
-  ADMIN_PASS: "2026",
-  WA_NUM:     "62818520057",
+  ADMIN_PASS: "dearmatrip2025",
+  WA_NUM:     "6281234567890",
 };
 
 /* ============================================================
@@ -921,7 +921,7 @@ function TripDetailPage({ trip, go, allTrips }) {
   return (
     <div style={{paddingTop:70}}>
       {/* hero */}
-      <div style={{position:"relative",height:460,overflow:"hidden"}}>
+      <div className="dm-detail-hero" style={{position:"relative",height:460,overflow:"hidden"}}>
         <img src={trip.hero_image||dest?.img||""} alt={trip.name}
           style={{width:"100%",height:"100%",objectFit:"cover"}}/>
         <div style={{position:"absolute",inset:0,
@@ -958,6 +958,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           maxWidth:1200,margin:"0 auto"}}>
           {TABS.map(t=>(
             <button key={t} onClick={()=>setTab(t.toLowerCase())}
+              className="dm-tab-btn"
               style={{padding:".9rem 1.5rem",border:"none",background:"none",cursor:"pointer",
                 fontFamily:"inherit",fontWeight:700,fontSize:".88rem",
                 color:tab===t.toLowerCase()?T.blue:T.gray,
@@ -970,7 +971,7 @@ function TripDetailPage({ trip, go, allTrips }) {
       </div>
 
       {/* content + sidebar */}
-      <div style={{maxWidth:1200,margin:"0 auto",padding:"2.5rem 5%",
+      <div className="dm-detail-wrap" style={{maxWidth:1200,margin:"0 auto",padding:"2.5rem 5%",
         display:"grid",gridTemplateColumns:"1fr 360px",gap:"2.5rem",alignItems:"start"}}>
         <div>
           {/* ─ INFORMASI ─ */}
@@ -984,7 +985,7 @@ function TripDetailPage({ trip, go, allTrips }) {
               {/* gallery */}
               {trip.gallery?.length>0 && (
                 <div style={{marginBottom:"2rem"}}>
-                  <div style={{borderRadius:16,overflow:"hidden",height:320,
+                  <div className="dm-gallery-main" style={{borderRadius:16,overflow:"hidden",height:320,
                     marginBottom:".8rem",position:"relative"}}>
                     <img src={trip.gallery[galI]} alt=""
                       style={{width:"100%",height:"100%",objectFit:"cover"}}/>
@@ -1011,7 +1012,7 @@ function TripDetailPage({ trip, go, allTrips }) {
                   </div>
                 </div>
               )}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.5rem"}}>
+              <div className="dm-incl-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.5rem"}}>
                 <div style={{background:"#F0FBF4",borderRadius:16,padding:"1.4rem",border:"1px solid #A7F3D0"}}>
                   <h3 style={{fontWeight:800,color:T.green,marginBottom:"1rem",fontSize:".95rem"}}>✅ Termasuk</h3>
                   {trip.termasuk?.map((x,i)=>(
@@ -1050,10 +1051,10 @@ function TripDetailPage({ trip, go, allTrips }) {
                     {day.rows?.map((row,ri)=>(
                       <div key={ri} style={{display:"flex",
                         borderBottom:ri<day.rows.length-1?"1px solid #E8EFF9":"none"}}>
-                        <div style={{padding:".75rem 1rem",color:"#555",fontWeight:700,
-                          width:170,flexShrink:0,borderRight:"1px solid #E8EFF9",
-                          background:"#F8FAFF",fontSize:".84rem"}}>{row[0]}</div>
-                        <div style={{padding:".75rem 1rem",color:"#333",fontSize:".88rem",lineHeight:1.5}}>{row[1]}</div>
+                        <div className="dm-itin-time" style={{padding:".75rem 1rem",color:"#555",fontWeight:700,
+                          width:170,minWidth:170,flexShrink:0,borderRight:"1px solid #E8EFF9",
+                          background:"#F8FAFF",fontSize:".84rem",lineHeight:1.4}}>{row[0]}</div>
+                        <div className="dm-itin-act" style={{padding:".75rem 1rem",color:"#333",fontSize:".88rem",lineHeight:1.5}}>{row[1]}</div>
                       </div>
                     ))}
                   </div>
@@ -1189,8 +1190,8 @@ function TripDetailPage({ trip, go, allTrips }) {
         </div>
 
         {/* ─ SIDEBAR ─ */}
-        <div style={{position:"sticky",top:140}}>
-          <div style={{background:"white",border:"1px solid #E8EFF9",borderRadius:22,
+        <div className="dm-detail-sidebar" style={{position:"sticky",top:140}}>
+          <div className="dm-sidebar-inner" style={{background:"white",border:"1px solid #E8EFF9",borderRadius:22,
             padding:"1.8rem",boxShadow:"0 8px 30px rgba(0,0,0,.1)",marginBottom:"1.2rem"}}>
             {/* pax selector */}
             {trip.pax_pricing?.length>0 && (
@@ -1233,7 +1234,7 @@ function TripDetailPage({ trip, go, allTrips }) {
               </div>
             )}
             <div style={{fontSize:".75rem",color:"#9ca3af",marginBottom:".2rem"}}>Biaya per orang</div>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2.2rem",
+            <div className="dm-detail-price" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2.2rem",
               fontWeight:700,color:T.blue,marginBottom:"1.4rem",lineHeight:1}}>
               {fmt(selPrice)}
             </div>
@@ -1286,12 +1287,25 @@ function TripDetailPage({ trip, go, allTrips }) {
           )}
         </div>
       </div>
+      {/* ── MOBILE STICKY BOTTOM BAR ── */}
+      <div className="dm-mob-bookbar" style={{display:"none",position:"fixed",bottom:0,left:0,right:0,
+        zIndex:200,background:"white",borderTop:"1px solid #E8EFF9",
+        padding:".8rem 4%",alignItems:"center",gap:".8rem",
+        boxShadow:"0 -4px 20px rgba(0,0,0,.12)"}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:".7rem",color:"#9ca3af"}}>Mulai dari</div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.5rem",fontWeight:700,color:T.blue,lineHeight:1}}>{fmt(selPrice)}</div>
+        </div>
+        <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip! Saya ingin booking ${trip.name}${trip.pax_pricing?.[paxI]?` (${trip.pax_pricing[paxI].label})`:""}`}
+          target="_blank"
+          style={{background:"linear-gradient(135deg,#25D366,#128C7E)",color:"white",
+            padding:".8rem 1.4rem",borderRadius:12,textAlign:"center",
+            textDecoration:"none",fontWeight:800,fontSize:".9rem",whiteSpace:"nowrap",flexShrink:0}}>
+          💬 Book WhatsApp
+        </a>
+      </div>
     </div>
   );
-}
-
-/* ============================================================
-   FAQ PAGE
    ============================================================ */
 function FAQPage({ go, faqList }) {
   const [open,setOpen]=useState(null);
@@ -2859,7 +2873,9 @@ function App() {
         .dm-hamburger{display:none!important;}
         .dm-nav-links{display:flex;}
         @media(max-width:860px){
-          .dm-nav-links{display:none!important;}
+          .dm-mob-bookbar{display:flex!important;}
+          .dm-detail-wrap{padding-bottom:80px!important;}
+        }
           .dm-hamburger{display:flex!important;}
           .dm-hero-title{font-size:2.4rem!important;}
           .dm-hero-sub{font-size:1rem!important;}
@@ -2868,6 +2884,15 @@ function App() {
           .dm-why-grid{grid-template-columns:1fr 1fr!important;}
           .dm-trip-cards{grid-template-columns:1fr!important;}
           .dm-detail-wrap{grid-template-columns:1fr!important;padding:1rem 4%!important;}
+          .dm-detail-sidebar{position:static!important;top:auto!important;order:-1;}
+          .dm-detail-hero{height:240px!important;}
+          .dm-itin-time{width:100px!important;min-width:100px!important;font-size:.78rem!important;}
+          .dm-itin-act{font-size:.84rem!important;}
+          .dm-incl-grid{grid-template-columns:1fr!important;gap:.8rem!important;}
+          .dm-tab-btn{padding:.75rem .8rem!important;font-size:.78rem!important;}
+          .dm-detail-price{font-size:1.7rem!important;}
+          .dm-sidebar-inner{padding:1.2rem!important;}
+          .dm-gallery-main{height:200px!important;}
           .dm-about-grid{grid-template-columns:1fr!important;}
           .dm-about-img{display:none!important;}
           .dm-stats-grid{grid-template-columns:1fr 1fr!important;}
@@ -2887,6 +2912,8 @@ function App() {
           .dm-footer-grid{grid-template-columns:1fr!important;}
           .dm-admin-porto{grid-template-columns:1fr!important;}
           .dm-stats-grid{grid-template-columns:1fr 1fr!important;}
+          .dm-tab-btn{padding:.65rem .6rem!important;font-size:.72rem!important;}
+          .dm-itin-time{width:80px!important;min-width:80px!important;font-size:.74rem!important;}
         }
       `}</style>
 
