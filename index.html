@@ -22,16 +22,16 @@ const { useState, useEffect, useRef, useCallback } = React;
    ============================================================ */
 const CFG = {
   // --- CLOUDINARY ---
-  CLOUD_NAME:    "dcmdyyicv",       // Settings → Account → Cloud name
+  CLOUD_NAME:    "your_cloud_name",       // Settings → Account → Cloud name
   UPLOAD_PRESET: "dearmatrip_unsigned",   // Settings → Upload → Add unsigned preset
 
   // --- SUPABASE ---
-  SUPABASE_URL:  "https://suytrozfwlzlamhateuh.supabase.co",
-  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1eXRyb3pmd2x6bGFtaGF0ZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2Mzg3NjIsImV4cCI6MjA4ODIxNDc2Mn0.JtQ_E5CObNs7G1EWuJ4l7DQUvRyrhfz778awRMRr1oo",
+  SUPABASE_URL:  "https://xxxx.supabase.co",
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
 
   // --- UMUM ---
-  ADMIN_PASS: "2026",
-  WA_NUM:     "62818520057",
+  ADMIN_PASS: "dearmatrip2025",
+  WA_NUM:     "6281234567890",
 };
 
 /* ============================================================
@@ -432,6 +432,7 @@ function Navbar({ go, trips, page, scrolled, onHamburger }) {
             return (
               <div key={d.id}
                 onMouseEnter={()=>setHov(d.id)}
+                onClick={()=>{go("destpage",{destId:d.id,filterType:type});setDd(null);setHov(null);}}
                 style={{padding:"10px 20px", cursor:"pointer",
                   background: hov===d.id ? "#EFF6FF" : "white",
                   color: hov===d.id ? T.blue : "#222",
@@ -802,10 +803,10 @@ function DestCard({ dest, trips, go }) {
 /* ============================================================
    DEST PAGE
    ============================================================ */
-function DestPage({ destId, trips, go }) {
+function DestPage({ destId, trips, go, filterType }) {
   const dest = destOf(destId);
   const dt   = trips.filter(t=>t.destination===destId);
-  const [tab,setTab] = useState(dt.some(t=>t.type==="open")?"open":"private");
+  const [tab,setTab] = useState(filterType || (dt.some(t=>t.type==="open")?"open":"private"));
   return (
     <div style={{paddingTop:70}}>
       <div style={{position:"relative",height:300,overflow:"hidden"}}>
@@ -977,9 +978,9 @@ function TripDetailPage({ trip, go, allTrips }) {
             <div>
               <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
                 fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>Tentang Trip Ini</h2>
-              <p style={{color:"#555",lineHeight:1.85,marginBottom:"1.5rem",fontSize:".95rem"}}>
-                {trip.description}
-              </p>
+              <div className="rte-output" style={{color:"#555",lineHeight:1.85,marginBottom:"1.5rem",fontSize:".95rem"}}
+                dangerouslySetInnerHTML={{__html: trip.description || ""}}
+              />
               {/* gallery */}
               {trip.gallery?.length>0 && (
                 <div style={{marginBottom:"2rem"}}>
@@ -1963,6 +1964,83 @@ function AdminTripsTable({ trips, onEdit, onDelete, onNew }) {
 /* ============================================================
    ADMIN TRIP FORM
    ============================================================ */
+/* ============================================================
+   RICH TEXT EDITOR  — toolbar: Bold / Italic / Underline /
+                        Bullet / Numbered / H3 / Clear
+   ============================================================ */
+function RTE({ value, onChange, placeholder = "Ketik deskripsi di sini…" }) {
+  const ref   = useRef(null);
+  const ready = useRef(false);
+
+  // Inject HTML once on mount
+  useEffect(() => {
+    if (ref.current && !ready.current) {
+      ref.current.innerHTML = value || "";
+      ready.current = true;
+    }
+  }, []);
+
+  const exec = (cmd, arg) => {
+    ref.current && ref.current.focus();
+    document.execCommand(cmd, false, arg ?? null);
+    if (ref.current) onChange(ref.current.innerHTML);
+  };
+
+  const TB = ({ cmd, arg, title, children }) => (
+    <button type="button" title={title}
+      onMouseDown={e => { e.preventDefault(); exec(cmd, arg); }}
+      style={{
+        minWidth: 30, height: 30, border: "1px solid #D1D5DB",
+        borderRadius: 6, background: "white", cursor: "pointer",
+        fontFamily: "inherit", fontSize: ".82rem",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "0 6px", transition: "background .15s",
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = "#EFF6FF"}
+      onMouseLeave={e => e.currentTarget.style.background = "white"}>
+      {children}
+    </button>
+  );
+
+  return (
+    <div style={{ border: "1.5px solid #E5E7EB", borderRadius: 10, overflow: "hidden" }}>
+      {/* Toolbar */}
+      <div style={{
+        display: "flex", gap: 3, padding: "7px 10px",
+        background: "#F8FAFF", borderBottom: "1px solid #E5E7EB",
+        flexWrap: "wrap", alignItems: "center",
+      }}>
+        <TB cmd="bold"                title="Bold (Tebal)"><b>B</b></TB>
+        <TB cmd="italic"              title="Italic (Miring)"><i>I</i></TB>
+        <TB cmd="underline"           title="Garis Bawah"><u>U</u></TB>
+        <div style={{ width: 1, height: 22, background: "#E5E7EB", margin: "0 3px" }} />
+        <TB cmd="insertUnorderedList" title="Bullet List">• List</TB>
+        <TB cmd="insertOrderedList"   title="Numbered List">1. List</TB>
+        <div style={{ width: 1, height: 22, background: "#E5E7EB", margin: "0 3px" }} />
+        <TB cmd="formatBlock" arg="h3" title="Heading 3">H3</TB>
+        <TB cmd="formatBlock" arg="p"  title="Paragraf Normal">¶</TB>
+        <div style={{ width: 1, height: 22, background: "#E5E7EB", margin: "0 3px" }} />
+        <TB cmd="removeFormat" title="Hapus Semua Format">
+          <span style={{ fontSize: ".72rem", color: "#888" }}>✕ Format</span>
+        </TB>
+      </div>
+      {/* Editable area */}
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        data-placeholder={placeholder}
+        onInput={() => ref.current && onChange(ref.current.innerHTML)}
+        style={{
+          minHeight: 130, padding: "10px 14px",
+          outline: "none", fontFamily: "inherit",
+          fontSize: ".9rem", lineHeight: 1.8, color: "#333",
+        }}
+      />
+    </div>
+  );
+}
+
 function AdminTripForm({ trip: init, onSave, onCancel }) {
   const DRAFT_KEY = `dm_draft_${init.id||"new"}`;
 
@@ -2080,10 +2158,13 @@ function AdminTripForm({ trip: init, onSave, onCancel }) {
           <div><label style={S.lbl}>Durasi</label>
             <input style={S.inp} value={t.duration} onChange={e=>upd("duration",e.target.value)} placeholder="1 Hari / 2D1N"/></div>
         </div>
-        <div><label style={S.lbl}>Deskripsi</label>
-          <textarea style={{...S.inp,minHeight:90,resize:"vertical"}}
-            value={t.description} onChange={e=>upd("description",e.target.value)}
-            placeholder="Deskripsi trip…"/></div>
+        <div>
+          <label style={S.lbl}>Deskripsi</label>
+          <p style={{fontSize:".74rem",color:"#9ca3af",marginBottom:5}}>
+            Toolbar: <b>B</b> Bold · <i>I</i> Italic · <u>U</u> Underline · • List · 1. List
+          </p>
+          <RTE value={t.description} onChange={v=>upd("description",v)} placeholder="Ketik deskripsi trip…"/>
+        </div>
       </div>
 
       {/* ─ PAX PRICING ─ */}
@@ -2575,22 +2656,58 @@ function Footer({ go }) {
 /* ============================================================
    ROOT APP
    ============================================================ */
+/* ============================================================
+   URL ↔ PAGE  helpers
+   ============================================================ */
+function urlToState(pathname, trips) {
+  const parts = pathname.replace(/^\//, "").split("/").filter(Boolean);
+  const seg = parts[0] || "home";
+  switch (seg) {
+    case "faq":         return { page: "faq",        params: {} };
+    case "portofolio":  return { page: "portofolio",  params: {} };
+    case "aboutus":      return { page: "about",       params: {} };
+    case "admin":       return { page: "admin",       params: {} };
+    case "opentrip":    return { page: "destpage",    params: { destId: parts[1] || "danautoba", filterType: "open" } };
+    case "privatetrip": return { page: "destpage",    params: { destId: parts[1] || "danautoba", filterType: "private" } };
+    case "trip": {
+      const tripId = parts[1];
+      const found  = (trips || []).find(t => t.id === tripId);
+      return { page: "detail", params: { tripId, trip: found || null } };
+    }
+    default: return { page: "home", params: {} };
+  }
+}
+
+function stateToUrl(page, params) {
+  switch (page) {
+    case "faq":        return "/faq";
+    case "portofolio": return "/portofolio";
+    case "about":      return "/aboutus";
+    case "admin":      return "/admin";
+    case "destpage": {
+      const type = params.filterType === "private" ? "privatetrip" : "opentrip";
+      return `/${type}/${params.destId || "danautoba"}`;
+    }
+    case "detail": {
+      const tr = params.trip;
+      if (tr) return `/trip/${tr.id}`;
+      if (params.tripId) return `/trip/${params.tripId}`;
+      return "/";
+    }
+    default: return "/";
+  }
+}
+
 function App() {
-  const [page, setPage] = useState(()=>{
-    const p = sessionStorage.getItem("dm_page") || "home";
-    if (p === "admin" && sessionStorage.getItem("dm_admin") === "1") return "admin";
-    if (p === "admin") return "home";
-    return p;
-  });
-  const [params, setParams] = useState(()=>{
-    try { return JSON.parse(sessionStorage.getItem("dm_params") || "{}"); } catch { return {}; }
-  });
+  const initState = urlToState(window.location.pathname, []);
+  const [page, setPage] = useState(initState.page);
+  const [params, setParams] = useState(initState.params);
   const [trips,    setTrips]    = useState([]);
   const [faqs,     setFaqs]     = useState([]);
   const [portoData,setPortoData]= useState({photos:Array(12).fill(""),videos:Array(6).fill("")});
   const [loading,  setLoading]  = useState(true);
   const [dbReady,  setDbReady]  = useState(false);
-  const [adminIn,  setAdminIn]  = useState(()=>sessionStorage.getItem("dm_admin")==="1");
+  const [adminIn,  setAdminIn]  = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
 
@@ -2600,9 +2717,8 @@ function App() {
     clearTimeout(idleRef.current);
     idleRef.current = setTimeout(()=>{
       setAdminIn(false);
-      sessionStorage.removeItem("dm_admin");
-      sessionStorage.setItem("dm_page","home");
       setPage("home");
+      history.pushState({}, "", "/");
     }, 60000);
   },[]);
 
@@ -2613,6 +2729,28 @@ function App() {
     events.forEach(e=>window.addEventListener(e,resetIdle));
     return()=>{ clearTimeout(idleRef.current); events.forEach(e=>window.removeEventListener(e,resetIdle)); };
   },[adminIn,resetIdle]);
+
+  // ── Back/forward browser button
+  useEffect(() => {
+    const onPop = () => {
+      const s = urlToState(window.location.pathname, trips);
+      setPage(s.page);
+      setParams(s.params);
+      if (s.page !== "admin") setAdminIn(false);
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [trips]);
+
+  // ── Re-hydrate trip from URL once trips are loaded
+  useEffect(() => {
+    if (!trips.length) return;
+    if (page === "detail" && params.tripId && !params.trip) {
+      const found = trips.find(t => t.id === params.tripId);
+      if (found) setParams(p => ({ ...p, trip: found }));
+    }
+  }, [trips]);
 
   // ── Scroll listener
   useEffect(()=>{
@@ -2665,19 +2803,17 @@ function App() {
   },[dbReady]);
 
   function go(p, prm={}) {
-    sessionStorage.setItem("dm_page", p);
-    sessionStorage.setItem("dm_params", JSON.stringify(prm));
+    const url = stateToUrl(p, prm);
+    history.pushState({ page: p, params: prm }, "", url);
     setPage(p); setParams(prm); setMobileMenu(false); window.scrollTo(0,0);
   }
 
   function adminLogin(){
     setAdminIn(true);
-    sessionStorage.setItem("dm_admin","1");
     resetIdle();
   }
   function adminLogout(){
     setAdminIn(false);
-    sessionStorage.removeItem("dm_admin");
     go("home");
   }
 
@@ -2712,6 +2848,14 @@ function App() {
         ::-webkit-scrollbar-track{background:#f1f1f1;}
         ::-webkit-scrollbar-thumb{background:#c1c1c1;border-radius:3px;}
         @keyframes slideDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+        [contenteditable][data-placeholder]:empty:before{
+          content:attr(data-placeholder);color:#9CA3AF;pointer-events:none;font-style:italic;
+        }
+        .rte-output ul,.rte-output ol{padding-left:1.5rem;margin:.4rem 0 .8rem;}
+        .rte-output li{margin-bottom:.3rem;}
+        .rte-output h3{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:700;margin:.8rem 0 .4rem;color:#081828;}
+        .rte-output strong{font-weight:800;}
+        .rte-output em{font-style:italic;}
         .dm-hamburger{display:none!important;}
         .dm-nav-links{display:flex;}
         @media(max-width:860px){
@@ -2767,7 +2911,7 @@ function App() {
           <div style={{color:"rgba(255,255,255,.35)",fontWeight:800,fontSize:".68rem",
             letterSpacing:".14em",textTransform:"uppercase",padding:"1.2rem 0 .4rem"}}>OPEN TRIP</div>
           {DEST_LIST.filter(d=>trips.some(t=>t.destination===d.id&&t.type==="open")).map(d=>(
-            <div key={d.id} onClick={()=>go("destpage",{destId:d.id})}
+            <div key={d.id} onClick={()=>go("destpage",{destId:d.id,filterType:"open"})}
               style={{color:"rgba(255,255,255,.7)",fontSize:".95rem",padding:".6rem 0",
                 borderBottom:"1px solid rgba(255,255,255,.05)",cursor:"pointer",paddingLeft:".5rem"}}>
               {d.name}
@@ -2776,7 +2920,7 @@ function App() {
           <div style={{color:"rgba(255,255,255,.35)",fontWeight:800,fontSize:".68rem",
             letterSpacing:".14em",textTransform:"uppercase",padding:"1.2rem 0 .4rem"}}>PRIVATE TRIP</div>
           {DEST_LIST.filter(d=>trips.some(t=>t.destination===d.id&&t.type==="private")).map(d=>(
-            <div key={d.id} onClick={()=>go("destpage",{destId:d.id})}
+            <div key={d.id} onClick={()=>go("destpage",{destId:d.id,filterType:"private"})}
               style={{color:"rgba(255,255,255,.7)",fontSize:".95rem",padding:".6rem 0",
                 borderBottom:"1px solid rgba(255,255,255,.05)",cursor:"pointer",paddingLeft:".5rem"}}>
               {d.name}
@@ -2794,7 +2938,7 @@ function App() {
       {page!=="admin" && <Navbar go={go} trips={trips} page={page} scrolled={scrolled} onHamburger={()=>setMobileMenu(m=>!m)}/>}
 
       {page==="home"       && <HomePage go={go} trips={trips}/>}
-      {page==="destpage"   && <DestPage destId={params.destId} trips={trips} go={go}/>}
+      {page==="destpage"   && <DestPage destId={params.destId} filterType={params.filterType} trips={trips} go={go}/>}
       {page==="detail"     && activeTrip && <TripDetailPage trip={activeTrip} go={go} allTrips={trips}/>}
       {page==="faq"        && <FAQPage go={go} faqList={faqs}/>}
       {page==="about"      && <AboutPage go={go}/>}
