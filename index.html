@@ -22,16 +22,16 @@ const { useState, useEffect, useRef, useCallback } = React;
    ============================================================ */
 const CFG = {
   // --- CLOUDINARY ---
-  CLOUD_NAME:    "dcmdyyicv",       // Settings → Account → Cloud name
+  CLOUD_NAME:    "your_cloud_name",       // Settings → Account → Cloud name
   UPLOAD_PRESET: "dearmatrip_unsigned",   // Settings → Upload → Add unsigned preset
 
   // --- SUPABASE ---
-  SUPABASE_URL:  "https://suytrozfwlzlamhateuh.supabase.co",
-  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1eXRyb3pmd2x6bGFtaGF0ZXVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2Mzg3NjIsImV4cCI6MjA4ODIxNDc2Mn0.JtQ_E5CObNs7G1EWuJ4l7DQUvRyrhfz778awRMRr1oo",
+  SUPABASE_URL:  "https://xxxx.supabase.co",
+  SUPABASE_ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
 
   // --- UMUM ---
-  ADMIN_PASS: "2026",
-  WA_NUM:     "62818520057",
+  ADMIN_PASS: "dearmatrip2025",
+  WA_NUM:     "6281234567890",
 };
 
 /* ============================================================
@@ -1306,6 +1306,10 @@ function TripDetailPage({ trip, go, allTrips }) {
       </div>
     </div>
   );
+}
+
+/* ============================================================
+   FAQ PAGE
    ============================================================ */
 function FAQPage({ go, faqList }) {
   const [open,setOpen]=useState(null);
