@@ -537,6 +537,7 @@ function MobileLangToggle() {
 
 function Navbar({ go, trips, page, scrolled, onHamburger }) {
   const { lang, toggleLang, tr } = useLang();
+  const { fmtCur } = useCurrency();
   const [dd,  setDd]  = useState(null);
   const [hov, setHov] = useState(null);
   const timerRef      = useRef(null);
@@ -943,6 +944,7 @@ function HomePage({ go, trips }) {
 }
 
 function DestCard({ dest, trips, go }) {
+  const { fmtCur } = useCurrency();
   const dt = trips.filter(t=>t.destination===dest.id);
   const open = dt.filter(t=>t.type==="open");
   const priv = dt.filter(t=>t.type==="private");
