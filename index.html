@@ -73,13 +73,13 @@ const TRANS = {
   petaBelum:        { id:"Peta belum tersedia",      en:"Map not available" },
 
   // ── Sidebar / Booking
-  pilihJumlahPax:   { id:"{t("pilihJumlahPax")}",         en:"Select Pax Count" },
-  biayaPerOrang:    { id:{t("biayaPerOrang")},           en:"Price per person" },
-  bookViaWa:        { id:"{t("bookViaWa")}",      en:"{t("bookViaWa")}" },
-  bookWa:           { id:"{t("bookWa")}",          en:"{t("bookWa")}" },
+  pilihJumlahPax:   { id:"{tr("pilihJumlahPax")}",         en:"Select Pax Count" },
+  biayaPerOrang:    { id:{tr("biayaPerOrang")},           en:"Price per person" },
+  bookViaWa:        { id:"{tr("bookViaWa")}",      en:"{tr("bookViaWa")}" },
+  bookWa:           { id:"{tr("bookWa")}",          en:"{tr("bookWa")}" },
   tanyaDulu:        { id:"Tanya Dulu",                en:"Ask First" },
   tripLainnya:      { id:"Trip Lainnya",              en:"Other Trips" },
-  mulaiDari:        { id:{t("mulaiDari")},                en:"Starting from" },
+  mulaiDari:        { id:{tr("mulaiDari")},                en:"Starting from" },
   durasi:           { id:"Durasi",                    en:"Duration" },
   dest:             { id:"Dest",                      en:"Dest" },
   pax:              { id:"Pax",                       en:"Pax" },
@@ -100,7 +100,7 @@ const TRANS = {
   tripTersedia:     { id:"Trip Tersedia",             en:"Available Trips" },
 
   // ── DestPage
-  pilihDestinasi:   { id:{t("pilihDestinasi")},           en:"Choose Destination" },
+  pilihDestinasi:   { id:{tr("pilihDestinasi")},           en:"Choose Destination" },
   semua:            { id:"Semua",                     en:"All" },
 
   // ── FAQ Page
@@ -114,7 +114,7 @@ const TRANS = {
   kontakKami:       { id:"Kontak Kami",               en:"Contact Us" },
 
   // ── Buttons general
-  detail:           { id:"{t("detail")}",                  en:"{t("detail")}" },
+  detail:           { id:"{tr("detail")}",                  en:"{tr("detail")}" },
   lihatDetail:      { id:"Lihat Detail",              en:"View Detail" },
   disalin:          { id:"Disalin!",                  en:"Copied!" },
   salinLink:        { id:"Salin Link",                en:"Copy Link" },
@@ -127,14 +127,14 @@ const TRANS = {
 
 function LangProvider({ children }) {
   const [lang, setLang] = useState("id");
-  const t = (key) => {
+  const tr = (key) => {
     const entry = TRANS[key];
     if (!entry) return key;
     return entry[lang] || entry.id;
   };
   const toggle = () => setLang(l => l==="id" ? "en" : "id");
   return (
-    <LangContext.Provider value={{ lang, t, toggleLang: toggle }}>
+    <LangContext.Provider value={{ lang, tr, toggleLang: toggle }}>
       {children}
     </LangContext.Provider>
   );
@@ -536,7 +536,7 @@ function MobileLangToggle() {
 }
 
 function Navbar({ go, trips, page, scrolled, onHamburger }) {
-  const { lang, toggleLang, t } = useLang();
+  const { lang, toggleLang, tr } = useLang();
   const [dd,  setDd]  = useState(null);
   const [hov, setHov] = useState(null);
   const timerRef      = useRef(null);
@@ -703,7 +703,7 @@ function Navbar({ go, trips, page, scrolled, onHamburger }) {
 
       {/* ── NAV LINKS — order: Beranda, Open Trip, Private Trip, Portofolio, About, FAQ ── */}
       <div className="dm-nav-links" style={{display:"flex", alignItems:"center", gap:"1.5rem"}}>
-        {[["home",t("beranda")]].map(([p,l])=>(
+        {[["home",tr("beranda")]].map(([p,l])=>(
           <span key={p} onClick={()=>go(p)}
             style={{color: page===p ? T.teal : "rgba(255,255,255,.82)", cursor:"pointer",
               fontWeight:700, fontSize:".84rem", letterSpacing:".06em", textTransform:"uppercase",
@@ -712,9 +712,9 @@ function Navbar({ go, trips, page, scrolled, onHamburger }) {
             {l}
           </span>
         ))}
-        <Dd type="open"    label={t("openTrip")}    />
-        <Dd type="private" label={t("privateTrip")} />
-        {[["portofolio",t("portofolio")],["about",t("about")],["faq",t("faq")]].map(([p,l])=>(
+        <Dd type="open"    label={tr("openTrip")}    />
+        <Dd type="private" label={tr("privateTrip")} />
+        {[["portofolio",tr("portofolio")],["about",tr("about")],["faq",tr("faq")]].map(([p,l])=>(
           <span key={p} onClick={()=>go(p)}
             style={{color: page===p ? T.teal : "rgba(255,255,255,.82)", cursor:"pointer",
               fontWeight:700, fontSize:".84rem", letterSpacing:".06em", textTransform:"uppercase",
@@ -984,7 +984,7 @@ function DestCard({ dest, trips, go }) {
    ============================================================ */
 function DestPage({ destId, trips, go, filterType }) {
   const { fmtCur } = useCurrency();
-  const { t, lang } = useLang();
+  const { lang, tr } = useLang();
   const dest = destOf(destId);
   const dt   = trips.filter(t=>t.destination===destId);
   const [tab,setTab] = useState(filterType || (dt.some(t=>t.type==="open")?"open":"private"));
@@ -1028,7 +1028,7 @@ function DestPage({ destId, trips, go, filterType }) {
 
 function TripCard({ trip, go }) {
   const { fmtCur, cur, toggle } = useCurrency();
-  const { t, lang } = useLang();
+  const { lang, tr } = useLang();
   const [hov,setHov]=useState(false);
   const mp = minPrice(trip);
   return (
@@ -1078,7 +1078,7 @@ function TripCard({ trip, go }) {
             </div>
             <div style={{background:`linear-gradient(135deg,${T.blue},${T.bltl})`,color:"white",
               padding:".5rem 1.2rem",borderRadius:50,fontSize:".82rem",fontWeight:700}}>
-              {t("detail")}
+              {tr("detail")}
             </div>
           </div>
           {/* Currency toggle mini */}
@@ -1103,7 +1103,7 @@ function TripCard({ trip, go }) {
    ============================================================ */
 function TripDetailPage({ trip, go, allTrips }) {
   const { fmtCur, cur, rate, toggle } = useCurrency();
-  const { t, lang } = useLang();
+  const { lang, tr } = useLang();
   const [tab,setTab]       = useState("informasi");
   const [faqO,setFaqO]     = useState(null);
   const [galI,setGalI]     = useState(0);
@@ -1166,7 +1166,7 @@ function TripDetailPage({ trip, go, allTrips }) {
     });
   };
 
-  const TABS = [t("informasi"),t("itinerary"),t("catatan"),t("ulasan"),t("lokasi"),t("faq")];
+  const TABS = [tr("informasi"),tr("itinerary"),tr("catatan"),tr("ulasan"),tr("lokasi"),tr("faq")];
   const TAB_KEYS = ["informasi","itinerary","catatan","ulasan","lokasi","faq"];
 
   return (
@@ -1229,7 +1229,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {tab==="informasi" && (
             <div>
               <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
-                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>{t("tentangTrip")}</h2>
+                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>{tr("tentangTrip")}</h2>
               <div className="rte-output" style={{color:"#555",lineHeight:1.85,marginBottom:"1.5rem",fontSize:".95rem"}}
                 dangerouslySetInnerHTML={{__html: trip.description || ""}}
               />
@@ -1265,7 +1265,7 @@ function TripDetailPage({ trip, go, allTrips }) {
               )}
               <div className="dm-incl-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.5rem"}}>
                 <div style={{background:"#F0FBF4",borderRadius:16,padding:"1.4rem",border:"1px solid #A7F3D0"}}>
-                  <h3 style={{fontWeight:800,color:T.green,marginBottom:"1rem",fontSize:".95rem"}}>{t("termasuk")}</h3>
+                  <h3 style={{fontWeight:800,color:T.green,marginBottom:"1rem",fontSize:".95rem"}}>{tr("termasuk")}</h3>
                   {trip.termasuk?.map((x,i)=>(
                     <div key={i} style={{display:"flex",gap:".5rem",alignItems:"flex-start",
                       marginBottom:".5rem",fontSize:".86rem",color:"#333"}}>
@@ -1274,7 +1274,7 @@ function TripDetailPage({ trip, go, allTrips }) {
                   ))}
                 </div>
                 <div style={{background:"#FFF1F1",borderRadius:16,padding:"1.4rem",border:"1px solid #FECACA"}}>
-                  <h3 style={{fontWeight:800,color:T.red,marginBottom:"1rem",fontSize:".95rem"}}>{t("tidakTermasuk")}</h3>
+                  <h3 style={{fontWeight:800,color:T.red,marginBottom:"1rem",fontSize:".95rem"}}>{tr("tidakTermasuk")}</h3>
                   {trip.tidak_termasuk?.map((x,i)=>(
                     <div key={i} style={{display:"flex",gap:".5rem",alignItems:"flex-start",
                       marginBottom:".5rem",fontSize:".86rem",color:"#333"}}>
@@ -1290,7 +1290,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {tab==="itinerary" && (
             <div>
               <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
-                fontSize:"1.7rem",marginBottom:"1.5rem",color:"#081828"}}>{t("itineraryPerjalanan")}</h2>
+                fontSize:"1.7rem",marginBottom:"1.5rem",color:"#081828"}}>{tr("itineraryPerjalanan")}</h2>
               {trip.itinerary?.map((day,di)=>(
                 <div key={di} style={{marginBottom:"2rem"}}>
                   <div style={{background:`linear-gradient(135deg,${T.blue},${T.bltl})`,
@@ -1316,7 +1316,7 @@ function TripDetailPage({ trip, go, allTrips }) {
                 <div style={{marginTop:"2.5rem"}}>
                   <h3 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
                     fontSize:"1.3rem",marginBottom:"1rem",color:"#081828"}}>
-                    {t("jadwalOpenTrip")} {dest?.name}
+                    {tr("jadwalOpenTrip")} {dest?.name}
                   </h3>
                   <div style={{overflowX:"auto",borderRadius:14,border:"1px solid #E8EFF9"}}>
                     <table style={{borderCollapse:"collapse",minWidth:"100%"}}>
@@ -1355,7 +1355,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {tab==="catatan" && (
             <div>
               <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
-                fontSize:"1.7rem",marginBottom:"1.2rem",color:"#081828"}}>{t("catatanPenting")}</h2>
+                fontSize:"1.7rem",marginBottom:"1.2rem",color:"#081828"}}>{tr("catatanPenting")}</h2>
               <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:16,padding:"1.5rem"}}>
                 {trip.catatan?.map((c,i)=>(
                   <div key={i} style={{display:"flex",gap:".7rem",alignItems:"flex-start",
@@ -1372,7 +1372,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {tab==="ulasan" && (
             <div>
               <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
-                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>{t("ulasanPeserta")}</h2>
+                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>{tr("ulasanPeserta")}</h2>
               {(!trip.ulasan||trip.ulasan.length===0)
                 ? <p style={{color:T.gray}}>Belum ada ulasan.</p>
                 : <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
@@ -1406,7 +1406,7 @@ function TripDetailPage({ trip, go, allTrips }) {
                     style={{border:0,borderRadius:16}} allowFullScreen loading="lazy" title="map"/>
                 : <div style={{background:"#F8FAFF",borderRadius:16,height:200,
                     display:"flex",alignItems:"center",justifyContent:"center",color:T.gray}}>
-                    {t("petaBelum")}
+                    {tr("petaBelum")}
                   </div>
               }
             </div>
@@ -1449,7 +1449,7 @@ function TripDetailPage({ trip, go, allTrips }) {
               <div style={{marginBottom:"1.2rem"}}>
                 <div style={{fontSize:".75rem",fontWeight:700,color:T.gray,
                   marginBottom:".7rem",letterSpacing:".06em",textTransform:"uppercase"}}>
-                  {t("pilihJumlahPax")}
+                  {tr("pilihJumlahPax")}
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:".5rem"}}>
                   {trip.pax_pricing.map((p,i)=>{
@@ -1503,7 +1503,7 @@ function TripDetailPage({ trip, go, allTrips }) {
               </button>
             </div>
             <div style={{fontSize:".72rem",color:"#9ca3af",marginBottom:".2rem"}}>
-              {t("biayaPerOrang")} {cur==="MYR" && <span style={{color:"#E8A020",fontWeight:600}}>· 1 MYR = Rp {rate.toLocaleString("id-ID")}</span>}
+              {tr("biayaPerOrang")} {cur==="MYR" && <span style={{color:"#E8A020",fontWeight:600}}>· 1 MYR = Rp {rate.toLocaleString("id-ID")}</span>}
             </div>
             <div className="dm-detail-price" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2.2rem",
               fontWeight:700,color:T.blue,marginBottom:"1.4rem",lineHeight:1}}>
@@ -1514,20 +1514,20 @@ function TripDetailPage({ trip, go, allTrips }) {
               style={{display:"block",background:"linear-gradient(135deg,#25D366,#128C7E)",
                 color:"white",padding:"1rem",borderRadius:14,textAlign:"center",
                 textDecoration:"none",fontWeight:800,fontSize:".98rem",marginBottom:".8rem"}}>
-              {t("bookViaWa")}
+              {tr("bookViaWa")}
             </a>
             <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip! Saya ingin tanya tentang ${trip.name}`}
               target="_blank"
               style={{display:"block",border:`2px solid ${T.blue}`,color:T.blue,
                 padding:".8rem",borderRadius:14,textAlign:"center",
                 textDecoration:"none",fontWeight:700,fontSize:".88rem",marginBottom:"1rem"}}>
-              {t("tanyaDulu")}
+              {tr("tanyaDulu")}
             </a>
 
             {/* ── SHARE BUTTONS ── */}
             <div style={{borderTop:"1px solid #E8EFF9",paddingTop:"1rem",marginBottom:"1rem"}}>
               <div style={{fontSize:".72rem",fontWeight:800,color:T.gray,letterSpacing:".08em",
-                textTransform:"uppercase",marginBottom:".7rem"}}>{t("bagikanPaket")}</div>
+                textTransform:"uppercase",marginBottom:".7rem"}}>{tr("bagikanPaket")}</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".5rem"}}>
                 {/* WhatsApp Share */}
                 <a href={waShareUrl} target="_blank" rel="noopener noreferrer"
@@ -1572,15 +1572,15 @@ function TripDetailPage({ trip, go, allTrips }) {
                     border:"none",cursor:"pointer",fontWeight:700,fontSize:".78rem",fontFamily:"inherit",
                     boxShadow:"0 2px 8px rgba(0,0,0,.15)",transition:"all .2s"}}>
                   {copied
-                    ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>{t("disalin")}</>
-                    : <><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>{t("salinLink")}</>
+                    ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>{tr("disalin")}</>
+                    : <><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>{tr("salinLink")}</>
                   }
                 </button>
               </div>
             </div>
             <div style={{borderTop:"1px solid #E8EFF9",paddingTop:"1rem",
               display:"flex",flexDirection:"column",gap:".5rem"}}>
-              {[[t("hari") ? "⏱":  "⏱",t("durasi"),trip.duration],["👥","Pax",trip.pax_pricing?.[paxI]?.label||"-"],["🗺","Dest",dest?.name]].map(([ico,l,v])=>(
+              {[[tr("hari") ? "⏱":  "⏱",tr("durasi"),trip.duration],["👥","Pax",trip.pax_pricing?.[paxI]?.label||"-"],["🗺","Dest",dest?.name]].map(([ico,l,v])=>(
                 <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:".84rem"}}>
                   <span style={{color:T.gray}}>{ico} {l}</span>
                   <span style={{fontWeight:700,color:"#081828"}}>{v}</span>
@@ -1591,7 +1591,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {related.length>0 && (
             <div style={{background:"#F8FAFF",borderRadius:20,padding:"1.4rem"}}>
               <div style={{fontWeight:800,color:"#081828",marginBottom:"1rem",fontSize:".95rem"}}>
-                {t("tripLainnya")}
+                {tr("tripLainnya")}
               </div>
               {related.slice(0,3).map(rt=>(
                 <div key={rt.id} onClick={()=>go("detail",{trip:rt})}
@@ -1627,7 +1627,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           style={{background:"linear-gradient(135deg,#25D366,#128C7E)",color:"white",
             padding:".8rem 1.4rem",borderRadius:12,textAlign:"center",
             textDecoration:"none",fontWeight:800,fontSize:".9rem",whiteSpace:"nowrap",flexShrink:0}}>
-          {t("bookWa")}
+          {tr("bookWa")}
         </a>
       </div>
     </div>
@@ -1638,6 +1638,7 @@ function TripDetailPage({ trip, go, allTrips }) {
    FAQ PAGE
    ============================================================ */
 function FAQPage({ go, faqList }) {
+  const { lang } = useLang();
   const [open,setOpen]=useState(null);
   return (
     <div style={{paddingTop:70}}>
@@ -2637,8 +2638,8 @@ function AdminTripForm({ trip: init, onSave, onCancel }) {
             </div>
             <div style={{borderRadius:10,overflow:"hidden",marginBottom:".5rem",border:"1px solid #E8EFF9"}}>
               <div style={{display:"flex",background:"#F8FAFF",borderBottom:"1px solid #E8EFF9"}}>
-                <div style={{width:165,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555",borderRight:"1px solid #E8EFF9"}}>{t("waktu")}</div>
-                <div style={{flex:1,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555"}}>{t("aktivitas")}</div>
+                <div style={{width:165,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555",borderRight:"1px solid #E8EFF9"}}>{tr("waktu")}</div>
+                <div style={{flex:1,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555"}}>{tr("aktivitas")}</div>
                 <div style={{width:34}}/>
               </div>
               {day.rows.map((row,ri)=>(
