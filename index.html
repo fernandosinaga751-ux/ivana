@@ -20,7 +20,7 @@ const { useState, useEffect, useRef, useCallback, useContext, createContext } = 
 const CurrencyContext = createContext(null);
 function CurrencyProvider({ children }) {
   const [cur, setCur] = useState("IDR");
-  const rate    = CFG.MYR_RATE; 4200  // 1 MYR = Rp CFG.MYR_RATE  (ubah di CFG)
+  const rate    = CFG.MYR_RATE;  // 1 MYR = Rp CFG.MYR_RATE  (ubah di CFG)
 
   const fmtCur = (n) => {
     if(n === null || n === undefined) return "-";
@@ -59,7 +59,7 @@ const CFG = {
   WA_NUM:     "62818520057",
 
   // --- KURS MATA UANG (ubah sesuai kurs terkini) ---
-  MYR_RATE: 3500,  // 1 MYR = Rp 3.500
+  MYR_RATE: 4200,  // 1 MYR = Rp 4.200
 };
 
 /* ============================================================
