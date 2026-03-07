@@ -12,7 +12,32 @@
   <div id="root"></div>
   <script type="text/babel">
 
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useContext, createContext } = React;
+
+/* ============================================================
+   💱 CURRENCY CONTEXT  — IDR ↔ MYR
+   ============================================================ */
+const CurrencyContext = createContext(null);
+function CurrencyProvider({ children }) {
+  const [cur, setCur] = useState("IDR");
+  const rate    = CFG.MYR_RATE;  // 1 MYR = Rp 4200 CFG.MYR_RATE  (ubah di CFG)
+
+  const fmtCur = (n) => {
+    if(n === null || n === undefined) return "-";
+    if(cur === "IDR") return "Rp " + Number(n).toLocaleString("id-ID");
+    const myr = n / rate;
+    return "RM " + myr.toLocaleString("ms-MY", {minimumFractionDigits:0, maximumFractionDigits:0});
+  };
+
+  const toggle = () => setCur(c => c==="IDR" ? "MYR" : "IDR");
+
+  return (
+    <CurrencyContext.Provider value={{ cur, rate, fmtCur, toggle }}>
+      {children}
+    </CurrencyContext.Provider>
+  );
+}
+const useCurrency = () => useContext(CurrencyContext);
 
 /* ============================================================
    ⚙️  KONFIGURASI — ISI SESUAI AKUN ANDA
@@ -32,6 +57,9 @@ const CFG = {
   // --- UMUM ---
   ADMIN_PASS: "2026",
   WA_NUM:     "62818520057",
+
+  // --- KURS MATA UANG (ubah sesuai kurs terkini) ---
+  MYR_RATE: 3500,  // 1 MYR = Rp 3.500
 };
 
 /* ============================================================
@@ -176,7 +204,8 @@ const MONTHS_F = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agus
 /* ============================================================
    HELPERS
    ============================================================ */
-const fmt      = n => "Rp " + Number(n).toLocaleString("id-ID");
+// fmt() now handled by useCurrency().fmtCur — see CurrencyProvider above
+const fmt = n => "Rp " + Number(n).toLocaleString("id-ID"); // fallback (non-component contexts)
 const genId    = () => "t" + Date.now();
 const minPrice = t => t.pax_pricing?.length ? Math.min(...t.pax_pricing.map(p=>p.price)) : (t.price||0);
 const destOf   = id => DEST_LIST.find(d=>d.id===id);
@@ -375,6 +404,7 @@ function ImgUpload({ onDone, label="Upload Foto", preview=null, small=false }) {
 /* ============================================================
    NAVBAR  — improved: better logo, reordered menu, smooth dd, no admin btn
    ============================================================ */
+
 function Navbar({ go, trips, page, scrolled, onHamburger }) {
   const [dd,  setDd]  = useState(null);
   const [hov, setHov] = useState(null);
@@ -463,7 +493,7 @@ function Navbar({ go, trips, page, scrolled, onHamburger }) {
                   onMouseLeave={e=>e.currentTarget.style.background="white"}>
                   <div style={{fontSize:".88rem", fontWeight:700, color:T.blue}}>{tr.name}</div>
                   <div style={{fontSize:".76rem", color:T.gray, marginTop:2}}>
-                    Mulai {fmt(minPrice(tr))} · {tr.duration}
+                    Mulai {fmtCur(minPrice(tr))} · {tr.duration}
                   </div>
                 </div>
               ))}
@@ -571,6 +601,7 @@ function Navbar({ go, trips, page, scrolled, onHamburger }) {
           onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 18px rgba(37,211,102,.38)";}}>
           💬 WhatsApp
         </a>
+
       </div>
     </nav>
   );
@@ -795,7 +826,7 @@ function DestCard({ dest, trips, go }) {
             color:"white",padding:"2px 9px",borderRadius:50,fontSize:".7rem",fontWeight:700}}>
             Private ({priv.length})</span>}
         </div>
-        {mp && <div style={{color:T.gold,fontWeight:800,fontSize:".92rem"}}>Mulai {fmt(mp)}</div>}
+        {mp && <div style={{color:T.gold,fontWeight:800,fontSize:".92rem"}}>Mulai {fmtCur(mp)}</div>}
       </div>
     </div>
   );
@@ -805,6 +836,7 @@ function DestCard({ dest, trips, go }) {
    DEST PAGE
    ============================================================ */
 function DestPage({ destId, trips, go, filterType }) {
+  const { fmtCur } = useCurrency();
   const dest = destOf(destId);
   const dt   = trips.filter(t=>t.destination===destId);
   const [tab,setTab] = useState(filterType || (dt.some(t=>t.type==="open")?"open":"private"));
@@ -847,6 +879,7 @@ function DestPage({ destId, trips, go, filterType }) {
 }
 
 function TripCard({ trip, go }) {
+  const { fmtCur, cur, toggle } = useCurrency();
   const [hov,setHov]=useState(false);
   const mp = minPrice(trip);
   return (
@@ -881,22 +914,34 @@ function TripCard({ trip, go }) {
             {trip.pax_pricing.slice(0,3).map((p,i)=>(
               <span key={i} style={{background:"#EFF6FF",color:T.blue,
                 padding:"2px 8px",borderRadius:6,fontSize:".7rem",fontWeight:700}}>
-                {p.label}: {fmt(p.price)}
+                {p.label}: {fmtCur(p.price)}
               </span>
             ))}
             {trip.pax_pricing.length>3 &&
               <span style={{color:T.gray,fontSize:".7rem",padding:"2px 0"}}>+{trip.pax_pricing.length-3} lagi</span>}
           </div>
         )}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-          borderTop:"1px solid #F0F4FC",paddingTop:".8rem"}}>
-          <div>
-            <div style={{fontSize:".7rem",color:"#9ca3af"}}>Mulai dari</div>
-            <div style={{fontSize:"1.15rem",fontWeight:800,color:T.blue}}>{fmt(mp)}</div>
+        <div style={{borderTop:"1px solid #F0F4FC",paddingTop:".8rem"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:".4rem"}}>
+            <div>
+              <div style={{fontSize:".7rem",color:"#9ca3af"}}>Mulai dari</div>
+              <div style={{fontSize:"1.15rem",fontWeight:800,color:T.blue}}>{fmtCur(mp)}</div>
+            </div>
+            <div style={{background:`linear-gradient(135deg,${T.blue},${T.bltl})`,color:"white",
+              padding:".5rem 1.2rem",borderRadius:50,fontSize:".82rem",fontWeight:700}}>
+              Detail →
+            </div>
           </div>
-          <div style={{background:`linear-gradient(135deg,${T.blue},${T.bltl})`,color:"white",
-            padding:".5rem 1.2rem",borderRadius:50,fontSize:".82rem",fontWeight:700}}>
-            Detail →
+          {/* Currency toggle mini */}
+          <div onClick={e=>{ e.stopPropagation(); toggle(); }}
+            style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+              background: cur==="MYR" ? "#FFF3E0" : "#F0F4FC",
+              border: cur==="MYR" ? "1px solid #E8A020" : "1px solid #D1D9F0",
+              borderRadius:8,padding:"5px 10px",cursor:"pointer",
+              transition:"all .2s",userSelect:"none"}}>
+            <span style={{fontSize:".7rem",color: cur==="MYR"?"#E8A020":T.blue, fontWeight:700}}>
+              {cur==="IDR" ? "🇮🇩 IDR → 🇲🇾 MYR" : "🇲🇾 MYR → 🇮🇩 IDR"}
+            </span>
           </div>
         </div>
       </div>
@@ -908,6 +953,7 @@ function TripCard({ trip, go }) {
    TRIP DETAIL PAGE  — full landing page per trip
    ============================================================ */
 function TripDetailPage({ trip, go, allTrips }) {
+  const { fmtCur, cur, rate, toggle } = useCurrency();
   const [tab,setTab]       = useState("informasi");
   const [faqO,setFaqO]     = useState(null);
   const [galI,setGalI]     = useState(0);
@@ -1279,7 +1325,7 @@ function TripDetailPage({ trip, go, allTrips }) {
                           )}
                         </div>
                         <div style={{fontWeight:800,fontSize:".88rem",color:sel?T.blue:T.gray,flexShrink:0}}>
-                          {fmt(p.price)}
+                          {fmtCur(p.price)}
                         </div>
                       </div>
                     );
@@ -1287,10 +1333,30 @@ function TripDetailPage({ trip, go, allTrips }) {
                 </div>
               </div>
             )}
-            <div style={{fontSize:".75rem",color:"#9ca3af",marginBottom:".2rem"}}>Biaya per orang</div>
+            {/* ── Currency Toggle Sidebar ── */}
+            <div style={{display:"flex",alignItems:"center",gap:".4rem",
+              marginBottom:".8rem",background:"#F8FAFF",borderRadius:10,padding:"4px"}}>
+              <button onClick={()=>{ if(cur!=="IDR") toggle(); }}
+                style={{flex:1,padding:"6px",border:"none",borderRadius:8,cursor:"pointer",
+                  fontFamily:"inherit",fontWeight:700,fontSize:".75rem",transition:"all .2s",
+                  background: cur==="IDR" ? T.blue : "transparent",
+                  color: cur==="IDR" ? "white" : T.gray}}>
+                🇮🇩 IDR
+              </button>
+              <button onClick={()=>{ if(cur!=="MYR") toggle(); }}
+                style={{flex:1,padding:"6px",border:"none",borderRadius:8,cursor:"pointer",
+                  fontFamily:"inherit",fontWeight:700,fontSize:".75rem",transition:"all .2s",
+                  background: cur==="MYR" ? "#CC0001" : "transparent",
+                  color: cur==="MYR" ? "white" : T.gray}}>
+                🇲🇾 MYR
+              </button>
+            </div>
+            <div style={{fontSize:".72rem",color:"#9ca3af",marginBottom:".2rem"}}>
+              Biaya per orang {cur==="MYR" && <span style={{color:"#E8A020",fontWeight:600}}>· 1 MYR = Rp {rate.toLocaleString("id-ID")}</span>}
+            </div>
             <div className="dm-detail-price" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2.2rem",
               fontWeight:700,color:T.blue,marginBottom:"1.4rem",lineHeight:1}}>
-              {fmt(selPrice)}
+              {fmtCur(selPrice)}
             </div>
             <a href={waBookingUrl}
               target="_blank"
@@ -1387,7 +1453,7 @@ function TripDetailPage({ trip, go, allTrips }) {
                   <div>
                     <div style={{fontSize:".82rem",fontWeight:700,color:"#081828",lineHeight:1.3}}>{rt.name}</div>
                     <div style={{fontSize:".74rem",color:T.blue,fontWeight:700,marginTop:2}}>
-                      Mulai {fmt(minPrice(rt))}
+                      Mulai {fmtCur(minPrice(rt))}
                     </div>
                   </div>
                 </div>
@@ -1403,7 +1469,7 @@ function TripDetailPage({ trip, go, allTrips }) {
         boxShadow:"0 -4px 20px rgba(0,0,0,.12)"}}>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:".7rem",color:"#9ca3af"}}>Mulai dari</div>
-          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.5rem",fontWeight:700,color:T.blue,lineHeight:1}}>{fmt(selPrice)}</div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.5rem",fontWeight:700,color:T.blue,lineHeight:1}}>{fmtCur(selPrice)}</div>
         </div>
         <a href={waBookingUrl}
           target="_blank"
@@ -3117,7 +3183,7 @@ function App() {
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App/>);
+root.render(<CurrencyProvider><App/></CurrencyProvider>);
   </script>
 </body>
 </html>
