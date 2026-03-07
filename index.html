@@ -40,6 +40,110 @@ function CurrencyProvider({ children }) {
 const useCurrency = () => useContext(CurrencyContext);
 
 /* ============================================================
+   🌐 LANGUAGE CONTEXT  — ID ↔ EN
+   ============================================================ */
+const LangContext = createContext(null);
+
+const TRANS = {
+  // ── Navbar & Menu
+  beranda:          { id:"Beranda",           en:"Home" },
+  openTrip:         { id:"Open Trip",         en:"Open Trip" },
+  privateTrip:      { id:"Private Trip",      en:"Private Trip" },
+  portofolio:       { id:"Portofolio",        en:"Portfolio" },
+  about:            { id:"About",             en:"About" },
+  faq:              { id:"FAQ",               en:"FAQ" },
+  chatWhatsapp:     { id:"💬 Chat WhatsApp",  en:"💬 Chat WhatsApp" },
+
+  // ── Trip Detail Tabs
+  informasi:        { id:"Informasi",         en:"Information" },
+  itinerary:        { id:"Itinerary",         en:"Itinerary" },
+  catatan:          { id:"Catatan",           en:"Notes" },
+  ulasan:           { id:"Ulasan",            en:"Reviews" },
+  lokasi:           { id:"Lokasi",            en:"Location" },
+
+  // ── Detail Section Headings
+  tentangTrip:      { id:"Tentang Trip Ini",        en:"About This Trip" },
+  itineraryPerjalanan: { id:"Itinerary Perjalanan", en:"Travel Itinerary" },
+  catatanPenting:   { id:"Catatan Penting",         en:"Important Notes" },
+  ulasanPeserta:    { id:"Ulasan Peserta",           en:"Participant Reviews" },
+  pertanyaanUmum:   { id:"Pertanyaan Umum",          en:"Frequently Asked Questions" },
+  termasuk:         { id:"✅ Termasuk",              en:"✅ Included" },
+  tidakTermasuk:    { id:"❌ Tidak Termasuk",        en:"❌ Not Included" },
+  jadwalOpenTrip:   { id:"📅 Jadwal Open Trip",      en:"📅 Open Trip Schedule" },
+  petaBelum:        { id:"Peta belum tersedia",      en:"Map not available" },
+
+  // ── Sidebar / Booking
+  pilihJumlahPax:   { id:"{t("pilihJumlahPax")}",         en:"Select Pax Count" },
+  biayaPerOrang:    { id:{t("biayaPerOrang")},           en:"Price per person" },
+  bookViaWa:        { id:"{t("bookViaWa")}",      en:"{t("bookViaWa")}" },
+  bookWa:           { id:"{t("bookWa")}",          en:"{t("bookWa")}" },
+  tanyaDulu:        { id:"Tanya Dulu",                en:"Ask First" },
+  tripLainnya:      { id:"Trip Lainnya",              en:"Other Trips" },
+  mulaiDari:        { id:{t("mulaiDari")},                en:"Starting from" },
+  durasi:           { id:"Durasi",                    en:"Duration" },
+  dest:             { id:"Dest",                      en:"Dest" },
+  pax:              { id:"Pax",                       en:"Pax" },
+
+  // ── Share
+  bagikanPaket:     { id:"Bagikan Paket Ini",         en:"Share This Package" },
+
+  // ── Misc badges
+  openTripBadge:    { id:"Open Trip",                 en:"Open Trip" },
+  privateTripBadge: { id:"Private Trip",              en:"Private Trip" },
+
+  // ── Home Page
+  destinasiPopuler: { id:"Destinasi Populer",         en:"Popular Destinations" },
+  lihatSemua:       { id:"Lihat Semua",               en:"View All" },
+  kenapaKami:       { id:"Kenapa Dearmatrip?",        en:"Why Dearmatrip?" },
+  hubungiKami:      { id:"Hubungi Kami",              en:"Contact Us" },
+  hubungiSekarang:  { id:"Hubungi kami sekarang dan dapatkan penawaran terbaik!", en:"Contact us now and get the best offer!" },
+  tripTersedia:     { id:"Trip Tersedia",             en:"Available Trips" },
+
+  // ── DestPage
+  pilihDestinasi:   { id:{t("pilihDestinasi")},           en:"Choose Destination" },
+  semua:            { id:"Semua",                     en:"All" },
+
+  // ── FAQ Page
+  faqTitle:         { id:"Pertanyaan yang Sering Ditanyakan", en:"Frequently Asked Questions" },
+  faqSub:           { id:"Temukan jawaban atas pertanyaan umum seputar layanan Dearmatrip", en:"Find answers to common questions about Dearmatrip services" },
+
+  // ── About Page
+  tentangKami:      { id:"Tentang Kami",              en:"About Us" },
+
+  // ── Footer
+  kontakKami:       { id:"Kontak Kami",               en:"Contact Us" },
+
+  // ── Buttons general
+  detail:           { id:"{t("detail")}",                  en:"{t("detail")}" },
+  lihatDetail:      { id:"Lihat Detail",              en:"View Detail" },
+  disalin:          { id:"Disalin!",                  en:"Copied!" },
+  salinLink:        { id:"Salin Link",                en:"Copy Link" },
+
+  // ── Itinerary table
+  waktu:            { id:"Waktu",                     en:"Time" },
+  aktivitas:        { id:"Aktivitas",                 en:"Activity" },
+  hari:             { id:"Hari",                      en:"Day" },
+};
+
+function LangProvider({ children }) {
+  const [lang, setLang] = useState("id");
+  const t = (key) => {
+    const entry = TRANS[key];
+    if (!entry) return key;
+    return entry[lang] || entry.id;
+  };
+  const toggle = () => setLang(l => l==="id" ? "en" : "id");
+  return (
+    <LangContext.Provider value={{ lang, t, toggleLang: toggle }}>
+      {children}
+    </LangContext.Provider>
+  );
+}
+const useLang = () => useContext(LangContext);
+
+
+
+/* ============================================================
    ⚙️  KONFIGURASI — ISI SESUAI AKUN ANDA
    ============================================================
    CLOUDINARY  → cloudinary.com (daftar gratis)
@@ -405,7 +509,34 @@ function ImgUpload({ onDone, label="Upload Foto", preview=null, small=false }) {
    NAVBAR  — improved: better logo, reordered menu, smooth dd, no admin btn
    ============================================================ */
 
+function MobileLangToggle() {
+  const { lang, toggleLang } = useLang();
+  return (
+    <div style={{marginTop:".8rem"}}>
+      <div style={{color:"rgba(255,255,255,.4)",fontWeight:800,fontSize:".66rem",
+        letterSpacing:".14em",textTransform:"uppercase",marginBottom:".5rem"}}>BAHASA / LANGUAGE</div>
+      <div style={{display:"flex",gap:".6rem"}}>
+        <button onClick={()=>{ if(lang!=="id") toggleLang(); }}
+          style={{flex:1,padding:".7rem",borderRadius:12,fontWeight:800,fontSize:".88rem",
+            fontFamily:"inherit",cursor:"pointer",border:"none",transition:"all .2s",
+            background: lang==="id" ? "linear-gradient(135deg,#CC0001,#E8A020)" : "rgba(255,255,255,.1)",
+            color:"white"}}>
+          🇮🇩 Indonesia
+        </button>
+        <button onClick={()=>{ if(lang!=="en") toggleLang(); }}
+          style={{flex:1,padding:".7rem",borderRadius:12,fontWeight:800,fontSize:".88rem",
+            fontFamily:"inherit",cursor:"pointer",border:"none",transition:"all .2s",
+            background: lang==="en" ? "linear-gradient(135deg,#1A6EDB,#0054B8)" : "rgba(255,255,255,.1)",
+            color:"white"}}>
+          🇬🇧 English
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Navbar({ go, trips, page, scrolled, onHamburger }) {
+  const { lang, toggleLang, t } = useLang();
   const [dd,  setDd]  = useState(null);
   const [hov, setHov] = useState(null);
   const timerRef      = useRef(null);
@@ -572,7 +703,7 @@ function Navbar({ go, trips, page, scrolled, onHamburger }) {
 
       {/* ── NAV LINKS — order: Beranda, Open Trip, Private Trip, Portofolio, About, FAQ ── */}
       <div className="dm-nav-links" style={{display:"flex", alignItems:"center", gap:"1.5rem"}}>
-        {[["home","Beranda"]].map(([p,l])=>(
+        {[["home",t("beranda")]].map(([p,l])=>(
           <span key={p} onClick={()=>go(p)}
             style={{color: page===p ? T.teal : "rgba(255,255,255,.82)", cursor:"pointer",
               fontWeight:700, fontSize:".84rem", letterSpacing:".06em", textTransform:"uppercase",
@@ -581,9 +712,9 @@ function Navbar({ go, trips, page, scrolled, onHamburger }) {
             {l}
           </span>
         ))}
-        <Dd type="open"    label="Open Trip"    />
-        <Dd type="private" label="Private Trip" />
-        {[["portofolio","Portofolio"],["about","About"],["faq","FAQ"]].map(([p,l])=>(
+        <Dd type="open"    label={t("openTrip")}    />
+        <Dd type="private" label={t("privateTrip")} />
+        {[["portofolio",t("portofolio")],["about",t("about")],["faq",t("faq")]].map(([p,l])=>(
           <span key={p} onClick={()=>go(p)}
             style={{color: page===p ? T.teal : "rgba(255,255,255,.82)", cursor:"pointer",
               fontWeight:700, fontSize:".84rem", letterSpacing:".06em", textTransform:"uppercase",
@@ -601,6 +732,22 @@ function Navbar({ go, trips, page, scrolled, onHamburger }) {
           onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 18px rgba(37,211,102,.38)";}}>
           💬 WhatsApp
         </a>
+
+        {/* ── LANG TOGGLE ── */}
+        <button onClick={toggleLang}
+          style={{
+            display:"flex", alignItems:"center", gap:5,
+            background: lang==="en" ? "linear-gradient(135deg,#1A6EDB,#0054B8)" : "rgba(255,255,255,.1)",
+            border: lang==="en" ? "none" : "1px solid rgba(255,255,255,.25)",
+            color:"white", padding:"7px 14px", borderRadius:50,
+            cursor:"pointer", fontWeight:800, fontSize:".8rem", fontFamily:"inherit",
+            whiteSpace:"nowrap", transition:"all .25s",
+            boxShadow: lang==="en" ? "0 4px 16px rgba(26,110,219,.45)" : "none",
+          }}
+          onMouseEnter={e=>{ if(lang!=="en") e.currentTarget.style.background="rgba(255,255,255,.18)"; }}
+          onMouseLeave={e=>{ if(lang!=="en") e.currentTarget.style.background="rgba(255,255,255,.1)"; }}>
+          {lang==="id" ? "🇬🇧 EN" : "🇮🇩 ID"}
+        </button>
 
       </div>
     </nav>
@@ -837,6 +984,7 @@ function DestCard({ dest, trips, go }) {
    ============================================================ */
 function DestPage({ destId, trips, go, filterType }) {
   const { fmtCur } = useCurrency();
+  const { t, lang } = useLang();
   const dest = destOf(destId);
   const dt   = trips.filter(t=>t.destination===destId);
   const [tab,setTab] = useState(filterType || (dt.some(t=>t.type==="open")?"open":"private"));
@@ -880,6 +1028,7 @@ function DestPage({ destId, trips, go, filterType }) {
 
 function TripCard({ trip, go }) {
   const { fmtCur, cur, toggle } = useCurrency();
+  const { t, lang } = useLang();
   const [hov,setHov]=useState(false);
   const mp = minPrice(trip);
   return (
@@ -929,7 +1078,7 @@ function TripCard({ trip, go }) {
             </div>
             <div style={{background:`linear-gradient(135deg,${T.blue},${T.bltl})`,color:"white",
               padding:".5rem 1.2rem",borderRadius:50,fontSize:".82rem",fontWeight:700}}>
-              Detail →
+              {t("detail")}
             </div>
           </div>
           {/* Currency toggle mini */}
@@ -954,6 +1103,7 @@ function TripCard({ trip, go }) {
    ============================================================ */
 function TripDetailPage({ trip, go, allTrips }) {
   const { fmtCur, cur, rate, toggle } = useCurrency();
+  const { t, lang } = useLang();
   const [tab,setTab]       = useState("informasi");
   const [faqO,setFaqO]     = useState(null);
   const [galI,setGalI]     = useState(0);
@@ -1016,7 +1166,8 @@ function TripDetailPage({ trip, go, allTrips }) {
     });
   };
 
-  const TABS = ["Informasi","Itinerary","Catatan","Ulasan","Lokasi","FAQ"];
+  const TABS = [t("informasi"),t("itinerary"),t("catatan"),t("ulasan"),t("lokasi"),t("faq")];
+  const TAB_KEYS = ["informasi","itinerary","catatan","ulasan","lokasi","faq"];
 
   return (
     <div style={{paddingTop:70}}>
@@ -1056,15 +1207,15 @@ function TripDetailPage({ trip, go, allTrips }) {
         boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
         <div style={{display:"flex",padding:"0 5%",minWidth:"max-content",
           maxWidth:1200,margin:"0 auto"}}>
-          {TABS.map(t=>(
-            <button key={t} onClick={()=>setTab(t.toLowerCase())}
+          {TABS.map((label,i)=>(
+            <button key={TAB_KEYS[i]} onClick={()=>setTab(TAB_KEYS[i])}
               className="dm-tab-btn"
               style={{padding:".9rem 1.5rem",border:"none",background:"none",cursor:"pointer",
                 fontFamily:"inherit",fontWeight:700,fontSize:".88rem",
-                color:tab===t.toLowerCase()?T.blue:T.gray,
-                borderBottom:tab===t.toLowerCase()?`3px solid ${T.blue}`:"3px solid transparent",
+                color:tab===TAB_KEYS[i]?T.blue:T.gray,
+                borderBottom:tab===TAB_KEYS[i]?`3px solid ${T.blue}`:"3px solid transparent",
                 transition:"all .2s",whiteSpace:"nowrap"}}>
-              {t}
+              {label}
             </button>
           ))}
         </div>
@@ -1078,7 +1229,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {tab==="informasi" && (
             <div>
               <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
-                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>Tentang Trip Ini</h2>
+                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>{t("tentangTrip")}</h2>
               <div className="rte-output" style={{color:"#555",lineHeight:1.85,marginBottom:"1.5rem",fontSize:".95rem"}}
                 dangerouslySetInnerHTML={{__html: trip.description || ""}}
               />
@@ -1114,7 +1265,7 @@ function TripDetailPage({ trip, go, allTrips }) {
               )}
               <div className="dm-incl-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1.5rem"}}>
                 <div style={{background:"#F0FBF4",borderRadius:16,padding:"1.4rem",border:"1px solid #A7F3D0"}}>
-                  <h3 style={{fontWeight:800,color:T.green,marginBottom:"1rem",fontSize:".95rem"}}>✅ Termasuk</h3>
+                  <h3 style={{fontWeight:800,color:T.green,marginBottom:"1rem",fontSize:".95rem"}}>{t("termasuk")}</h3>
                   {trip.termasuk?.map((x,i)=>(
                     <div key={i} style={{display:"flex",gap:".5rem",alignItems:"flex-start",
                       marginBottom:".5rem",fontSize:".86rem",color:"#333"}}>
@@ -1123,7 +1274,7 @@ function TripDetailPage({ trip, go, allTrips }) {
                   ))}
                 </div>
                 <div style={{background:"#FFF1F1",borderRadius:16,padding:"1.4rem",border:"1px solid #FECACA"}}>
-                  <h3 style={{fontWeight:800,color:T.red,marginBottom:"1rem",fontSize:".95rem"}}>❌ Tidak Termasuk</h3>
+                  <h3 style={{fontWeight:800,color:T.red,marginBottom:"1rem",fontSize:".95rem"}}>{t("tidakTermasuk")}</h3>
                   {trip.tidak_termasuk?.map((x,i)=>(
                     <div key={i} style={{display:"flex",gap:".5rem",alignItems:"flex-start",
                       marginBottom:".5rem",fontSize:".86rem",color:"#333"}}>
@@ -1139,7 +1290,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {tab==="itinerary" && (
             <div>
               <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
-                fontSize:"1.7rem",marginBottom:"1.5rem",color:"#081828"}}>Itinerary Perjalanan</h2>
+                fontSize:"1.7rem",marginBottom:"1.5rem",color:"#081828"}}>{t("itineraryPerjalanan")}</h2>
               {trip.itinerary?.map((day,di)=>(
                 <div key={di} style={{marginBottom:"2rem"}}>
                   <div style={{background:`linear-gradient(135deg,${T.blue},${T.bltl})`,
@@ -1165,7 +1316,7 @@ function TripDetailPage({ trip, go, allTrips }) {
                 <div style={{marginTop:"2.5rem"}}>
                   <h3 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
                     fontSize:"1.3rem",marginBottom:"1rem",color:"#081828"}}>
-                    📅 Jadwal Open Trip {dest?.name}
+                    {t("jadwalOpenTrip")} {dest?.name}
                   </h3>
                   <div style={{overflowX:"auto",borderRadius:14,border:"1px solid #E8EFF9"}}>
                     <table style={{borderCollapse:"collapse",minWidth:"100%"}}>
@@ -1204,7 +1355,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {tab==="catatan" && (
             <div>
               <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
-                fontSize:"1.7rem",marginBottom:"1.2rem",color:"#081828"}}>Catatan Penting</h2>
+                fontSize:"1.7rem",marginBottom:"1.2rem",color:"#081828"}}>{t("catatanPenting")}</h2>
               <div style={{background:"#FFFBEB",border:"1px solid #FDE68A",borderRadius:16,padding:"1.5rem"}}>
                 {trip.catatan?.map((c,i)=>(
                   <div key={i} style={{display:"flex",gap:".7rem",alignItems:"flex-start",
@@ -1221,7 +1372,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {tab==="ulasan" && (
             <div>
               <h2 style={{fontFamily:"'Cormorant Garamond',serif",fontWeight:700,
-                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>Ulasan Peserta</h2>
+                fontSize:"1.7rem",marginBottom:"1rem",color:"#081828"}}>{t("ulasanPeserta")}</h2>
               {(!trip.ulasan||trip.ulasan.length===0)
                 ? <p style={{color:T.gray}}>Belum ada ulasan.</p>
                 : <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
@@ -1255,7 +1406,7 @@ function TripDetailPage({ trip, go, allTrips }) {
                     style={{border:0,borderRadius:16}} allowFullScreen loading="lazy" title="map"/>
                 : <div style={{background:"#F8FAFF",borderRadius:16,height:200,
                     display:"flex",alignItems:"center",justifyContent:"center",color:T.gray}}>
-                    Peta belum tersedia
+                    {t("petaBelum")}
                   </div>
               }
             </div>
@@ -1298,7 +1449,7 @@ function TripDetailPage({ trip, go, allTrips }) {
               <div style={{marginBottom:"1.2rem"}}>
                 <div style={{fontSize:".75rem",fontWeight:700,color:T.gray,
                   marginBottom:".7rem",letterSpacing:".06em",textTransform:"uppercase"}}>
-                  Pilih Jumlah Pax
+                  {t("pilihJumlahPax")}
                 </div>
                 <div style={{display:"flex",flexDirection:"column",gap:".5rem"}}>
                   {trip.pax_pricing.map((p,i)=>{
@@ -1352,7 +1503,7 @@ function TripDetailPage({ trip, go, allTrips }) {
               </button>
             </div>
             <div style={{fontSize:".72rem",color:"#9ca3af",marginBottom:".2rem"}}>
-              Biaya per orang {cur==="MYR" && <span style={{color:"#E8A020",fontWeight:600}}>· 1 MYR = Rp {rate.toLocaleString("id-ID")}</span>}
+              {t("biayaPerOrang")} {cur==="MYR" && <span style={{color:"#E8A020",fontWeight:600}}>· 1 MYR = Rp {rate.toLocaleString("id-ID")}</span>}
             </div>
             <div className="dm-detail-price" style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2.2rem",
               fontWeight:700,color:T.blue,marginBottom:"1.4rem",lineHeight:1}}>
@@ -1363,20 +1514,20 @@ function TripDetailPage({ trip, go, allTrips }) {
               style={{display:"block",background:"linear-gradient(135deg,#25D366,#128C7E)",
                 color:"white",padding:"1rem",borderRadius:14,textAlign:"center",
                 textDecoration:"none",fontWeight:800,fontSize:".98rem",marginBottom:".8rem"}}>
-              💬 Book via WhatsApp
+              {t("bookViaWa")}
             </a>
             <a href={`https://wa.me/${CFG.WA_NUM}?text=Halo Dearmatrip! Saya ingin tanya tentang ${trip.name}`}
               target="_blank"
               style={{display:"block",border:`2px solid ${T.blue}`,color:T.blue,
                 padding:".8rem",borderRadius:14,textAlign:"center",
                 textDecoration:"none",fontWeight:700,fontSize:".88rem",marginBottom:"1rem"}}>
-              Tanya Dulu
+              {t("tanyaDulu")}
             </a>
 
             {/* ── SHARE BUTTONS ── */}
             <div style={{borderTop:"1px solid #E8EFF9",paddingTop:"1rem",marginBottom:"1rem"}}>
               <div style={{fontSize:".72rem",fontWeight:800,color:T.gray,letterSpacing:".08em",
-                textTransform:"uppercase",marginBottom:".7rem"}}>Bagikan Paket Ini</div>
+                textTransform:"uppercase",marginBottom:".7rem"}}>{t("bagikanPaket")}</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:".5rem"}}>
                 {/* WhatsApp Share */}
                 <a href={waShareUrl} target="_blank" rel="noopener noreferrer"
@@ -1421,15 +1572,15 @@ function TripDetailPage({ trip, go, allTrips }) {
                     border:"none",cursor:"pointer",fontWeight:700,fontSize:".78rem",fontFamily:"inherit",
                     boxShadow:"0 2px 8px rgba(0,0,0,.15)",transition:"all .2s"}}>
                   {copied
-                    ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Disalin!</>
-                    : <><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Salin Link</>
+                    ? <><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>{t("disalin")}</>
+                    : <><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>{t("salinLink")}</>
                   }
                 </button>
               </div>
             </div>
             <div style={{borderTop:"1px solid #E8EFF9",paddingTop:"1rem",
               display:"flex",flexDirection:"column",gap:".5rem"}}>
-              {[["⏱","Durasi",trip.duration],["👥","Pax",trip.pax_pricing?.[paxI]?.label||"-"],["🗺","Dest",dest?.name]].map(([ico,l,v])=>(
+              {[[t("hari") ? "⏱":  "⏱",t("durasi"),trip.duration],["👥","Pax",trip.pax_pricing?.[paxI]?.label||"-"],["🗺","Dest",dest?.name]].map(([ico,l,v])=>(
                 <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:".84rem"}}>
                   <span style={{color:T.gray}}>{ico} {l}</span>
                   <span style={{fontWeight:700,color:"#081828"}}>{v}</span>
@@ -1440,7 +1591,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           {related.length>0 && (
             <div style={{background:"#F8FAFF",borderRadius:20,padding:"1.4rem"}}>
               <div style={{fontWeight:800,color:"#081828",marginBottom:"1rem",fontSize:".95rem"}}>
-                Trip Lainnya
+                {t("tripLainnya")}
               </div>
               {related.slice(0,3).map(rt=>(
                 <div key={rt.id} onClick={()=>go("detail",{trip:rt})}
@@ -1476,7 +1627,7 @@ function TripDetailPage({ trip, go, allTrips }) {
           style={{background:"linear-gradient(135deg,#25D366,#128C7E)",color:"white",
             padding:".8rem 1.4rem",borderRadius:12,textAlign:"center",
             textDecoration:"none",fontWeight:800,fontSize:".9rem",whiteSpace:"nowrap",flexShrink:0}}>
-          💬 Book WhatsApp
+          {t("bookWa")}
         </a>
       </div>
     </div>
@@ -1496,7 +1647,7 @@ function FAQPage({ go, faqList }) {
         <span style={{color:"rgba(255,255,255,.35)",margin:"0 .5rem"}}>/</span>
         <span style={{color:"rgba(255,255,255,.55)",fontSize:".82rem"}}>FAQ</span>
         <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"3rem",
-          fontWeight:700,color:"white",marginTop:".5rem"}}>Pertanyaan Umum</h1>
+          fontWeight:700,color:"white",marginTop:".5rem"}}>{lang==="en"?"Frequently Asked Questions":"Pertanyaan Umum"}</h1>
       </div>
       <div style={{maxWidth:860,margin:"0 auto",padding:"3rem 5%"}}>
         <div style={{background:"#F0FBF4",borderRadius:16,padding:"1.5rem 2rem",
@@ -2486,8 +2637,8 @@ function AdminTripForm({ trip: init, onSave, onCancel }) {
             </div>
             <div style={{borderRadius:10,overflow:"hidden",marginBottom:".5rem",border:"1px solid #E8EFF9"}}>
               <div style={{display:"flex",background:"#F8FAFF",borderBottom:"1px solid #E8EFF9"}}>
-                <div style={{width:165,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555",borderRight:"1px solid #E8EFF9"}}>Waktu</div>
-                <div style={{flex:1,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555"}}>Aktivitas</div>
+                <div style={{width:165,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555",borderRight:"1px solid #E8EFF9"}}>{t("waktu")}</div>
+                <div style={{flex:1,padding:".4rem .8rem",fontSize:".76rem",fontWeight:700,color:"#555"}}>{t("aktivitas")}</div>
                 <div style={{width:34}}/>
               </div>
               {day.rows.map((row,ri)=>(
@@ -2892,6 +3043,7 @@ function stateToUrl(page, params) {
 }
 
 function App() {
+  const { lang } = useLang();
   const initState = urlToState(window.location.pathname, []);
   const [page, setPage] = useState(initState.page);
   const [params, setParams] = useState(initState.params);
@@ -3115,7 +3267,7 @@ function App() {
             </div>
           ))}
           <div style={{color:"rgba(255,255,255,.35)",fontWeight:800,fontSize:".68rem",
-            letterSpacing:".14em",textTransform:"uppercase",padding:"1.2rem 0 .4rem"}}>OPEN TRIP</div>
+            letterSpacing:".14em",textTransform:"uppercase",padding:"1.2rem 0 .4rem"}}>{lang==="id"?"OPEN TRIP":"OPEN TRIP"}</div>
           {DEST_LIST.filter(d=>trips.some(t=>t.destination===d.id&&t.type==="open")).map(d=>(
             <div key={d.id} onClick={()=>go("destpage",{destId:d.id,filterType:"open"})}
               style={{color:"rgba(255,255,255,.7)",fontSize:".95rem",padding:".6rem 0",
@@ -3124,7 +3276,7 @@ function App() {
             </div>
           ))}
           <div style={{color:"rgba(255,255,255,.35)",fontWeight:800,fontSize:".68rem",
-            letterSpacing:".14em",textTransform:"uppercase",padding:"1.2rem 0 .4rem"}}>PRIVATE TRIP</div>
+            letterSpacing:".14em",textTransform:"uppercase",padding:"1.2rem 0 .4rem"}}>{lang==="id"?"PRIVATE TRIP":"PRIVATE TRIP"}</div>
           {DEST_LIST.filter(d=>trips.some(t=>t.destination===d.id&&t.type==="private")).map(d=>(
             <div key={d.id} onClick={()=>go("destpage",{destId:d.id,filterType:"private"})}
               style={{color:"rgba(255,255,255,.7)",fontSize:".95rem",padding:".6rem 0",
@@ -3138,6 +3290,9 @@ function App() {
               textDecoration:"none",fontWeight:800,fontSize:"1rem"}}>
             💬 Chat WhatsApp
           </a>
+
+          {/* Lang toggle mobile */}
+          <MobileLangToggle />
         </div>
       )}
 
@@ -3183,7 +3338,7 @@ function App() {
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<CurrencyProvider><App/></CurrencyProvider>);
+root.render(<LangProvider><CurrencyProvider><App/></CurrencyProvider></LangProvider>);
   </script>
 </body>
 </html>
