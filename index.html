@@ -665,15 +665,8 @@ function Navbar({ go, trips, page, scrolled, onHamburger }) {
           else go("home");
         }}>
         <div style={{position:"relative"}}>
-          <img
-            src="/logo.png"
-            alt="Dearmatrip"
-            style={{height:50, objectFit:"contain",
-              filter:"brightness(1.1) drop-shadow(0 0 14px rgba(0,188,212,.45))"}}
-            onError={e=>{ e.target.style.display="none"; e.target.nextSibling.style.display="flex"; }}
-          />
-          {/* Fallback text logo */}
-          <div style={{display:"none", flexDirection:"column", alignItems:"flex-start"}}>
+          {/* Text logo — tampil langsung tanpa butuh file logo.png */}
+          <div style={{display:"flex", flexDirection:"column", alignItems:"flex-start"}}>
             <div style={{display:"flex", alignItems:"baseline", gap:3}}>
               <span style={{fontFamily:"'Cormorant Garamond',serif", fontWeight:700,
                 fontSize:"1.55rem", color:"white", letterSpacing:"-.01em", lineHeight:1}}>Dear</span>
